@@ -1,0 +1,482 @@
+---
+title: "Pratiquons les données spatiales avec R !"
+author: "Kim Antunez, Etienne Côme"
+date: "**Quantilille** Juin 2021"
+output:
+  unilur::tutorial_html_solution:
+    toc: true
+    toc_float: false
+    toc_depth: 1
+    suffix: ""
+    theme: journal
+    highlight: kate
+    number_sections: no
+    number_subsections: no
+---
+
+```{r knitr_init, echo=FALSE, cache=FALSE, include=FALSE}
+library(knitr)
+## Global options
+options(max.print="90")
+opts_chunk$set(echo=TRUE,
+               cache=FALSE, #TRUE
+               prompt=FALSE,
+               tidy=FALSE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE)
+opts_knit$set(width=90)
+options(width = 90)
+
+# no margins
+knit_hooks$set(nm = function(before, options, envir){
+  if (before){
+    par(mar=c(0,0,0,0))
+  }
+})
+
+# title margins
+knit_hooks$set(sm = function(before, options, envir){
+  if (before){
+    par(mar=c(0,0,1.2,0))
+  }
+})
+
+# boxes custom
+#remotes::install_github("koncina/unilur")
+knitr::opts_template$set(alert = list(box.title = "Watch out!",
+                                      box.body = list(fill = "#ffe0d9", colour = "black"),
+                                      box.header = list(fill = "#FFAD99", colour = "black"),
+                                      box.collapse = NULL,
+                                      box.icon = "fa-exclamation-triangle"))
+knitr::opts_template$set(solution = list(box.title = "Solution",
+                                         box.body = list(fill = "#e6f6e7", colour = "black"),
+                                         box.header = list(fill = "#ace1af", colour = "black"),
+                                         box.icon = "fa-check-square",
+                                         box.collapse = TRUE))
+knitr::opts_template$set(information = list(box.title = "Information",
+                                            box.body = list(fill = "#bbe8f4", colour = "black"),
+                                            box.header = list(fill = "#64c9e6", colour = "black"),
+                                            box.icon = "fa-info-circle",
+                                            box.collapse = NULL))
+knitr::opts_template$set(clues = list(box.title = "Indices",
+                                      box.body = list(fill = "#fff9dc", colour = "black"),
+                                      box.header = list(fill = "#ffec8b", colour = "black"),
+                                      box.icon = "fa-search",
+                                      box.collapse = TRUE))
+```
+
+La base de données utilisée dans ce TP concerne la **géolocalisation des accidents de la route** à Paris. Il s'agit plus précisément des
+[bases de données annuelles des accidents corporels de la circulation routière](https://www.data.gouv.fr/fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2019/), en particulier le millésime 2019. 
+
+
+*« Pour chaque accident corporel (soit un accident survenu sur une voie ouverte à la circulation publique, impliquant au moins un véhicule et ayant fait au moins une victime ayant nécessité des soins), des saisies d’information décrivant l’accident sont effectuées par l’unité des forces de l’ordre (police, gendarmerie, etc.) qui est intervenue sur le lieu de l’accident. Ces saisies sont rassemblées dans une fiche intitulée bulletin d’analyse des accidents corporels. L’ensemble de ces fiches constitue le fichier national des accidents corporels de la circulation dit « Fichier BAAC » administré par l’Observatoire national interministériel de la sécurité routière "ONISR".*
+
+*Un certain nombre d’indicateurs issus de cette base font l’objet d’une [labellisation par l’autorité de la statistique publique](https://www.onisr.securite-routiere.gouv.fr/outils-statistiques/indicateurs-labellises) (arrêté du 27 novembre 2019). »*
+
+</br>
+Vous pouvez télécharger les bases de données brutes  [ici](https://github.com/comeetie/satRday/blob/master/exercises/data.zip?raw=true) ou utiliser R pour les télécharger dans votre dossier actuel :
+```{r, eval=FALSE}
+# télécharger le dataset
+download.file("https://github.com/comeetie/quantilille/blob/master/exercises/data.zip?raw=true", 
+              destfile = "data.zip")
+# dézipper
+unzip("data.zip",exdir=".") 
+```
+
+# Exercice 1 : Manipuler des objets `sf` et les `data.frame` associés
+
+```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+Importer la carte des iris[^1] 'iris.75.shp' de Paris.
+```
+
+
+[^1]: Iris est un zonage statistique de l'Insee dont l'acronyme signifie « Ilots Regroupés pour l'Information Statistique ». Leur taille est de 2000 habitants par unité.
+
+```{block, opts.label = "clues"}
+Utilisez la fonction `sf::st_read()`.
+```
+
+```{r, solution = TRUE}
+library(sf)
+iris.75 <- st_read("data/iris_75.shp")
+```
+
+
+
+```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
+Afficher la carte de Paris grâce à l'instruction `plot(iris.75)`. Que remarquez-vous ? 
+```
+
+```{r, nm=TRUE, solution = TRUE}
+plot(iris.75)
+```
+
+```{block, solution = TRUE}
+On remarque que R fait plusieurs graphiques : un par variable contenue dans l'objet `sf`. 
+```
+
+```{block, box.title = "3", box.body = list(fill = "white"), box.icon = "fa-star"}
+A quoi sert la fonction `sf::st_geometry()` ? Quelle solution au problème précédent proposez-vous ?
+```
+
+```{block, solution = TRUE}
+`sf::st_geometry()` permet d'isoler l'information contenue dans la colonne `geometry` de l'objet `sf`. Cela permet de mettre de côté les autres variables et de n'en afficher qu'une.
+```
+
+```{r, nm=TRUE, eval=FALSE, solution = TRUE}
+plot(st_geometry(iris.75))
+```
+
+```{r, nm=TRUE, echo=FALSE}
+plot(st_geometry(iris.75))
+```
+
+```{block, box.title = "4", box.body = list(fill = "white"), box.icon = "fa-star"}
+Importez la couche des accidents de la route appelée 'accidents_75.shp' et affichez la carte des accidents dans Paris en utilisant simplement la fonction `plot`. 
+```
+
+```{block, opts.label = "clues"}
+Utilisez `sf::st_read()` et `sf::st_geometry()`. Vous pouvez aussi customiser la carte en utilisant différents paramètres de la fonction `plot` : bg, col, lwd, border, pch, cex...
+```
+
+```{r, sm=TRUE, solution = TRUE}
+accidents.2019.paris <- st_read("data/accidents2019_paris.shp")
+```
+
+```{r, sm=TRUE, eval=FALSE, solution = TRUE}
+plot(st_geometry(iris.75), bg = "cornsilk", col = "lightblue", 
+     border = "white", lwd = .5)
+plot(st_geometry(accidents.2019.paris), col = "red", pch = 20, cex = .2, add=TRUE)
+title("Accidents à Paris")
+```
+
+```{r, sm=TRUE, echo=FALSE}
+plot(st_geometry(iris.75), bg = "cornsilk", col = "lightblue", 
+     border = "white", lwd = .5)
+plot(st_geometry(accidents.2019.paris), col = "red", pch = 20, cex = .2, add=TRUE)
+title("Accidents à Paris")
+```
+
+```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
+Comptez le nombre de personnes accidentées par iris ainsi que le nombre de personnes accidentées mais non blessées.
+```
+
+```{block, opts.label = "clues"}
+Utilisez `sf::st_intersects()` et `sapply()`.
+
+Documentation de la variable `grav` : Gravité de blessure de l'usager, les usagers accidentés sont classés en trois catégories de victimes plus les indemnes :
+
+1 : Indemne
+2 : Tué
+3 : Blessé hospitalisé
+4 : Blessé léger
+
+```
+
+
+```{r, nm=TRUE, solution = TRUE}
+library(dplyr)
+inter <- st_intersects(x = iris.75, y = accidents.2019.paris)
+inter_nonbless <- st_intersects(x = iris.75, y = accidents.2019.paris %>% filter(grav==1))
+iris.75$nbacc <- sapply(inter, length)
+iris.75$nbaccnb <- sapply(X = inter_nonbless, FUN = length)
+head(iris.75)
+```
+
+```{block, box.title = "6", box.body = list(fill = "white"), box.icon = "fa-star"}
+Utilisez la couche ‘iris.75’, pour créer une nouvelle couche cartographique agrégée appelée ‘com.75’ qui correspond aux ‘arrondissements’ de Paris. Gardez aussi dans cette nouvelle couche l'information sur le nombre de personnes accidentées et le nombre de personnes accidentées non blessées dans chaque arrondissement.
+```
+
+```{block, opts.label = "information"}
+La couche cartographique ‘iris.75’ contient un code de 5 chiffres dans sa variable *INSEE_COM* qui correspond au code de l'arrondissement.
+```
+
+```{block, opts.label = "clues"}
+Utilisez les fonctions du package classique `dplyr` : `select`, `group_by` et `summarize`.
+Ces fonctions fonctionnent également avec les objets `sf`.
+```
+
+```{r, nm=TRUE, eval=FALSE, solution = TRUE}
+library(dplyr)
+com.75 <- iris.75 %>%
+  group_by(INSEE_COM) %>%
+  summarize(nbacc = sum(nbacc),
+            nbaccnb = sum(nbaccnb)) 
+
+plot(st_geometry(iris.75), col = "ivory3", border = "ivory1")
+plot(st_geometry(com.75), col = NA, border = "ivory4", lwd = 2, add = TRUE)
+```
+
+```{r, nm=TRUE, echo=FALSE}
+library(dplyr)
+com.75 <- iris.75 %>%
+  group_by(INSEE_COM) %>%
+  summarize(nbacc = sum(nbacc),
+            nbaccnb = sum(nbaccnb)) 
+
+plot(st_geometry(iris.75), col = "ivory3", border = "ivory1")
+plot(st_geometry(com.75), col = NA, border = "ivory4", lwd = 2, add = TRUE)
+```
+
+
+
+# Exercice 2 : Cartes interactives
+
+Dans cet exercice, nous allons utiliser `mapview` pour explorer les accidents de la route ayant eu lieu à Paris en 2019.
+
+En complément, nous allons utiliser les données d'OSM permettant de croiser le lieu des accidents avec les routes empruntées. 
+
+```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+Chargez la base de données ‘accidents.2019.paris’ et affichez les positions des 11 897 personnes victimes d'un accident à Paris en 2019 grâce au package `mapview`. Essayez d'utiliser différents paramètres pour customiser votre carte.
+```
+
+```{block, opts.label = "information"}
+Par exemple, vous pouvez utiliser les paramètres `map.types`, `col.regions`, `label`, `color`, `legend`, `layer.name`, `homebutton`, `lwd` ... du package `mapview`.
+```
+
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+library(mapview)
+library(sf)
+
+accidents.2019.paris <- st_read("data/accidents2019_paris.shp")
+mapview(accidents.2019.paris, map.types = "OpenStreetMap",
+        col.regions = "#940000",
+        label = accidents.2019.paris$Num_Acc,
+        color = "white", legend = TRUE, layer.name = "Accidents à Paris en 2019",
+        homebutton = FALSE, lwd = 0.2)
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=FALSE}
+library(mapview)
+library(sf)
+
+accidents.2019.paris <- st_read("data/accidents2019_paris.shp")
+mapview(accidents.2019.paris, map.types = "OpenStreetMap",
+        col.regions = "#940000",
+        label = accidents.2019.paris$Num_Acc,
+        color = "white", legend = TRUE, layer.name = "Accidents à Paris en 2019",
+        homebutton = FALSE, lwd = 0.2)
+```
+
+```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
+
+1. Utilisez les polygones de ‘iris.75’ pour extraire la "bounding box" de Paris en projection WGS84. 
+
+2. Récupérez ensuite grâce à `osmdata`, à l'intérieur de cette bounding box", le fond de carte du périphérique parisien (`key = "highway"`, `value = "trunk"`)
+
+3. Faites l'intersection entre les accidents et le périphérique, en prenant soin d'ajouter une zone tampon de 50 mètres autour de ce dernier et appeler ce nouvel ensemble de points `accidents.2019.paris.periph`.
+```
+
+```{block, opts.label = "clues"}
+Utiliser `sf::st_bbox()` et `sf::st_transform()` pour extraire la bounding box. Le code epsg de WGS84 est 4326.
+
+Utiliser : 
+
+* `osmdata:opq()` pour définir la bounding box de la requête osm
+* `osmdata:add_osm_feature()` pour définir la paire key:value recherchée
+* `osmdata:osmdata_sf()` pour récupérer les données osm.
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=TRUE, solution=TRUE}
+library(osmdata)
+
+#1. bounding box
+bb      <- iris.75 %>% st_transform(4326) %>% st_bbox()
+q       <- opq(bbox = bb,timeout = 180)
+
+#2. périphérique
+qt      <- add_osm_feature (q, key = 'highway',value = 'trunk', value_exact = FALSE)
+roads    <- c(osmdata_sf(qt))$osm_lines %>% st_transform(st_crs(iris.75))
+
+#3. zone tampon et intersection
+accidents.2019.paris.periph <- st_intersection(accidents.2019.paris,
+                                               st_intersection(st_geometry(roads),iris.75)  %>%
+                                                 st_buffer(dist = 50) %>%
+                                                 st_union()
+)  
+```
+
+```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+Affichez les positions des 2 073 personnes victimes d'un accident à Paris **SUR LE PERIPHERIQUE** en 2019 grâce au package `mapview`. Essayez à nouveau d'utiliser différents paramètres pour customiser votre carte.
+```
+
+```{block, opts.label = "information"}
+Par exemple, vous pouvez utiliser les paramètres `map.types`, `col.regions`, `label`, `color`, `legend`, `layer.name`, `homebutton`, `lwd` ... du package `mapview`.
+```
+
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+library(mapview)
+library(sf)
+
+mapview(accidents.2019.paris.periph, map.types = "OpenStreetMap",
+        col.regions = "#940000",
+        color = "white", legend = TRUE, layer.name = "Accidents sur le périphérique à Paris en 2019",
+        homebutton = FALSE, lwd = 0.2)
+```
+
+
+## Bonus : compter les points dans une grille
+
+```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
+Utiliser la fonction `pt_in_grid` ci-dessous pour compter le nombre de personnes accidentées dans des cellules de 500m de côté.
+
+Utilisez `mapview` pour afficher la grille choroplèthe.
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=TRUE}
+pt_in_grid <- function(feat, adm, cellsize = 1000){
+  grid <- st_make_grid(x = adm, cellsize = cellsize, what = "polygons")
+  . <- st_intersects(grid, adm)
+  grid <- grid[sapply(X = ., FUN = length)>0]
+  . <- st_intersects(grid, feat)
+  grid <- st_sf(n = sapply(X = ., FUN = length), grid)
+  return(grid)
+}
+```
+
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+library(RColorBrewer)
+gr <- pt_in_grid(accidents.2019.paris,iris.75,500)
+bks = quantile(gr$n)
+cols <- brewer.pal(length(bks), "Reds")
+
+mapview(st_as_sf(gr)  %>% st_transform(4326),
+        map.types = "Stamen.TonerLite",
+        color = "white",
+        col.regions = cols,
+        alpha = 0.9,
+        at = bks, 
+        legend = TRUE,
+        layer.name = "Nombre d'accidents par</br>carreau de 500 mètres",
+        homebutton = FALSE, lwd = 0.2)
+```
+
+
+```{r, nm=TRUE, eval=TRUE, echo=FALSE}
+library(RColorBrewer)
+gr <- pt_in_grid(accidents.2019.paris,iris.75,500)
+bks = quantile(gr$n)
+cols <- brewer.pal(length(bks), "Reds")
+
+mapview(st_as_sf(gr)  %>% st_transform(4326),
+        map.types = "Stamen.TonerLite",
+        color = "white",
+        col.regions = cols,
+        alpha = 0.9,
+        at = bks, 
+        legend = TRUE,
+        layer.name = "Nombre d'accidents par</br>carreau de 500 mètres",
+        homebutton = FALSE, lwd = 0.2)
+```
+
+
+# Exercice 3 : Cartes statiques
+
+Nous aimerions créer avec le package `ggplot2` une carte des arrondissements de Paris qui combine le nombre de personnes accidentées et la part de celles qui n'ont pas été blessées. 
+
+```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+Préparation des données : 
+
+* Chargez le fond de carte 'com75_shp' (qui contient le nombre de personnes accidentées, en tout et non blessées, dans chaque arrondissement) et créez une variable appelée *part_non_blesses* qui correspond à la part des personnes non blessées parmi les accidentées dans chaque arrondissement.  
+* Créez un vecteur des quartiles de la variable *part_non_blesses*.   
+* Créez le vecteur de couleur qui correspond au nombre de classes définies plus tôt. 
+* Ajouter une variable appelée *typo* à 'com.75' qui indique la classe de l'arrondissement selon la discrétisation contenue dans *bks* pour la variable  *part_non_blesses*.  
+
+```
+
+```{block, opts.label = "information"}
+Pour la création de ‘bks’ et de ‘cols’, utilisez les fonctions `quantile` et `RColorBrewer::brewer.pal`.
+Pour la création de la variable *typo*, vous pouvez utiliser la fonction `cut` avec les paramètres `digit.lab = 2` et `include.lowest = TRUE`.
+```
+
+```{r, solution=TRUE}
+library(sf)
+# Importer les données
+com.75 <- st_read("data/com_75.shp", quiet = TRUE)
+# Créer la variable
+com.75$part_non_blesses <- 100 * com.75$nbaccnb / com.75$nbacc
+# Définir les bks par quantile
+bks <- quantile(com.75$part_non_blesses, na.rm = TRUE)
+# Définir une palette de couleurs
+library(RColorBrewer)
+cols <- brewer.pal(length(bks)-1,"Greens")
+
+# For ggplot2 maps - Create a "typo" variable
+library(dplyr)
+com.75 <- com.75 %>%
+  mutate(typo = cut(part_non_blesses, breaks = bks,labels = paste0(round(bks[1:(length(bks)-1)])," à ",round(bks[2:length(bks)])),
+                    include.lowest = TRUE))
+```
+
+
+```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
+En utilisant la package `ggplot2`, créez une carte qui contient en choroplèthe la variable `part_non_blesses` et en cercles proportionnels la variable `nbacc`. 
+```
+
+```{r, eval=FALSE, solution=TRUE}
+library(ggplot2)
+
+map_ggplot <- ggplot() +
+  geom_sf(data = com.75, aes(fill = typo), colour = "grey80") +
+  scale_fill_manual(name = "Part des non-blessés parmi les\naccidentés de la route (en %)",
+                    values = cols) +
+  geom_sf(data = com.75 %>%  st_centroid(),
+          aes(size = nbacc), fill = "#f5f5f5", color = "grey20", shape = 21, 
+          stroke = 1, alpha = 0.8, show.legend = "point") +
+  scale_size_area(max_size = 12, name = "Nombre de personnes\n accidentées") +
+  coord_sf(crs = 2154, datum = NA,
+           xlim = st_bbox(com.75)[c(1,3)],
+           ylim = st_bbox(com.75)[c(2,4)]) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "cornsilk", color = NA), 
+        legend.position = "bottom", plot.background = element_rect(fill = "cornsilk",color=NA)) +
+  labs(title = "Accidents de la route à Paris en 2019",
+       caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021") +
+  guides(size = guide_legend(label.position = "bottom", title.position = "top",
+                             override.aes = list(alpha = 1, color = "#ffffff")),
+         fill = guide_legend(label.position = "bottom", title.position = "top"))
+
+plot(map_ggplot)
+```
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+map_ggplot <- ggplot() +
+  geom_sf(data = com.75, aes(fill = typo), colour = "grey80") +
+  scale_fill_manual(name = "Part des non-blessés parmi les\naccidentés de la route (en %)",
+                    values = cols) +
+  geom_sf(data = com.75 %>%  st_centroid(),
+          aes(size = nbacc), fill = "#f5f5f5", color = "grey20", shape = 21, 
+          stroke = 1, alpha = 0.8, show.legend = "point") +
+  scale_size_area(max_size = 12, name = "Nombre de personnes\n accidentées") +
+  coord_sf(crs = 2154, datum = NA,
+           xlim = st_bbox(com.75)[c(1,3)],
+           ylim = st_bbox(com.75)[c(2,4)]) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "cornsilk", color = NA), 
+        legend.position = "bottom", plot.background = element_rect(fill = "cornsilk",color=NA)) +
+  labs(title = "Accidents de la route à Paris en 2019",
+       caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021") +
+  guides(size = guide_legend(label.position = "bottom", title.position = "top",
+                             override.aes = list(alpha = 1, color = "#ffffff")),
+         fill = guide_legend(label.position = "bottom", title.position = "top"))
+
+plot(map_ggplot)
+```
+
+
+
+
+
+--------------------------------------------
+
+--------------------------------------------
+
+**Reproducibilité**
+
+```{r}
+sessionInfo()
+```
+
