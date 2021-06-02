@@ -6,8 +6,8 @@ Kim Antunez (@antuki) et Etienne Côme (@comeetie)
 
 Cet atelier est composé de deux parties :
 
-- Un [cours magistral](comeetie.github.io/quantilille/lecture/lecture.html) ;
-- Un [tutoriel](comeetie.github.io/quantilille/exercises/exercices.html)  
+- Un [cours magistral](https://comeetie.github.io/quantilille/lecture/lecture.html) ;
+- Un [tutoriel](https://comeetie.github.io/quantilille/exercises/exercices.html)  
 
 ## Données
 
