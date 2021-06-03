@@ -571,7 +571,7 @@ gg = subway.poly %>% st_join(listings.l93) %>% st_drop_geometry() %>%
   filter(name.x %in% sel_metro, price<750) %>%  
   mutate(name.x=factor(name.x,levels=sel_metro))
 ggplot(gg)+geom_boxplot(aes(y=name.x,x=price))+theme_bw()+labs(title="Répartition des prix d'une nuité",
-       subtitle=" à proximité de certaines stations de métro ",caption = "fichier inside airBnB, ONISR\nantuki & comeetie, 2021", x="Prix d'une nuité ()",y="")
+       subtitle=" à proximité de certaines stations de métro ",caption = "fichier inside airBnB,\nantuki & comeetie, 2021", x="Prix d'une nuité (€)",y="")
 ```
 
 ```{block, box.title = "6", box.body = list(fill = "white"), box.icon = "fa-star"}
@@ -618,7 +618,7 @@ ggplot(subway.point)+
         plot.background = element_rect(fill = "ivory",color=NA)) +
   labs(title = "Prix median d'une nuitée Air BnB",
        subtitle = "suivant la station de métro la plus proche.",
-       caption = "fichier inside AirBnB, ONISR\nantuki & comeetie, 2021",x="",y="")
+       caption = "fichier inside AirBnB, \nantuki & comeetie, 2021",x="",y="")
 ```
 --------------------------------------------
 
