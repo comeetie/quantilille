@@ -492,7 +492,7 @@ listings = read_csv("../data/listings.csv") %>%
   st_as_sf(coords = c("longitude", "latitude"),crs = 4326, agr = "constant")
 
 listings.l93 = st_transform(listings,2154)
-plot(listings.l93 %>% st_geometry())
+plot(listings.l93 %>% st_geometry(),col="#88888822")
 
 ```
 
@@ -524,18 +524,18 @@ Préparation des Voronoi
 ```
 
 
-```{r, echo=FALSE,cache=TRUE}
+```{r, echo=FALSE}
 subway.voronoi = st_collection_extract(st_voronoi(x = st_union(subway.l93 %>% st_geometry())))
 bb = st_as_sfc(st_bbox(listings.l93),crs=2154)
 subway.voronoi = subway.voronoi %>% st_intersection(bb)    
                                 
 
-plot(subway.voronoi,col="green")
-plot(listings.l93 %>% st_geometry(), pch = 20, cex = 1,add=TRUE)
+plot(subway.voronoi)
+plot(listings.l93 %>% st_geometry(), pch = 20, cex = 1,add=TRUE,col="#55555511")
 plot(subway.l93 %>% st_geometry(), pch = 20, col = "red", add=TRUE, cex = 1)
 ```
 
-```{block, box.title = "3", box.body = list(fill = "white"), box.icon = "fa-star"}
+```{block, box.title = "4", box.body = list(fill = "white"), box.icon = "fa-star"}
 Résumé statistique
 
 * Aggrégez les listings sur les voronois et calculez le nombre d'annonce, le prix moyen et median ainsi que la variance des prix.
@@ -565,7 +565,7 @@ Essayez de reproduire cette figure :
 ```
 
 ```{r, echo=FALSE}
-sel_metro=c('Saint-Lazare','École Militaire','Saint-Germain-des-Prés','Rennes','Denfert-Rochereau','Colonel Fabien','Saint-Placide','Oberkampf',"Place d'Italie",'La Tour Maubourg','Les Halles','Filles du Calvaire','Mairie des Lilas','Porte de la Villette',"Porte d'Italie",'Montparnasse-Bienvenüe','Balard','Château Rouge',"Gare d'Austerlitz","Gare de l'Est",'Palais Royal - Musée du Louvre','Boulogne - Pont de Saint-Cloud','Richard Lenoir','Strasbourg - Saint-Denis','Gare de Lyon','Poissonnière','Tolbiac','Gare du Nord (Métro)')
+sel_metro=c('Filles du Calvaire','Colonel Fabien','Saint-Placide','Rennes','Les Halles','Tolbiac','Denfert-Rochereau','Oberkampf','Montparnasse-Bienvenüe','La Tour Maubourg','Mairie des Lilas','École Militaire','Saint-Germain-des-Prés','Boulogne - Pont de Saint-Cloud',"Gare de l'Est","Place d'Italie",'Richard Lenoir','Saint-Lazare','Porte de la Villette','Palais Royal - Musée du Louvre','Château Rouge','Gare du Nord (Métro)','Strasbourg - Saint-Denis','Poissonnière','Balard','Gare de Lyon',"Porte d'Italie","Gare d'Austerlitz")
 
 gg = subway.poly %>% st_join(listings.l93) %>% st_drop_geometry() %>% 
   filter(name.x %in% sel_metro, price<750) %>%  
@@ -574,14 +574,16 @@ ggplot(gg)+geom_boxplot(aes(y=name.x,x=price))+theme_bw()+labs(title="Répartiti
        subtitle=" à proximité de certaines stations de métro ",caption = "fichier inside airBnB, ONISR\nantuki & comeetie, 2021", x="Prix d'une nuité ()",y="")
 ```
 
+```{block, box.title = "6", box.body = list(fill = "white"), box.icon = "fa-star"}
+Vous pourez vous servir de ce vecteur de sélection de quelques stations de métro:
+```
 
 ```{r, eval=FALSE}
-sel_metro = 
-    c('Saint-Lazare','École Militaire','Saint-Germain-des-Prés','Rennes','Denfert-Rochereau','Colonel Fabien','Saint-Placide','Oberkampf',"Place d'Italie",'La Tour Maubourg','Les Halles','Filles du Calvaire','Mairie des Lilas','Porte de la Villette',"Porte d'Italie",'Montparnasse-Bienvenüe','Balard','Château Rouge',"Gare d'Austerlitz","Gare de l'Est",'Palais Royal - Musée du Louvre','Boulogne - Pont de Saint-Cloud','Richard Lenoir','Strasbourg - Saint-Denis','Gare de Lyon','Poissonnière','Tolbiac','Gare du Nord (Métro)')
+sel_metro=c('Filles du Calvaire','Colonel Fabien','Saint-Placide','Rennes','Les Halles','Tolbiac','Denfert-Rochereau','Oberkampf','Montparnasse-Bienvenüe','La Tour Maubourg','Mairie des Lilas','École Militaire','Saint-Germain-des-Prés','Boulogne - Pont de Saint-Cloud',"Gare de l'Est","Place d'Italie",'Richard Lenoir','Saint-Lazare','Porte de la Villette','Palais Royal - Musée du Louvre','Château Rouge','Gare du Nord (Métro)','Strasbourg - Saint-Denis','Poissonnière','Balard','Gare de Lyon',"Porte d'Italie","Gare d'Austerlitz")
 ```
 
 
-```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
+```{block, box.title = "7", box.body = list(fill = "white"), box.icon = "fa-star"}
 Essayez de reproduire cette carte :
 ```
 
