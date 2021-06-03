@@ -156,8 +156,12 @@ plot(pts, pch = 20, col = "red", add=TRUE, cex = 1)
 
 `st_interects()` crée une liste de points dans chaque polygone. 
 
-```{r p0, nm=TRUE}
+```{r, nm=TRUE}
 inter <- st_intersects(mtq, pts)
+```
+
+Il ne reste plus qu'a compter.
+```{r, nm=TRUE}
 mtq$nbpts <- sapply(X = inter, FUN = length)
 plot(st_geometry(mtq))
 # display munucipalities that intersect at least 2 point
@@ -179,10 +183,9 @@ plot(pts, pch = 20, col = "red", add=TRUE, cex = 1)
 <small>google: "st_voronoi R sf" (https://github.com/r-spatial/sf/issues/474 & https://stackoverflow.com/questions/45719790/create-voronoi-polygon-with-simple-feature-in-r)
 </small>
 ```{r, echo=TRUE,warning=FALSE,message=FALSE,fig.show='last',fig.height=4.5}
-mtq_v <- st_voronoi(x = st_union(mtq_c))
-mtq_v <- st_intersection(st_cast(mtq_v), st_union(mtq))
-mtq_v <- st_join(x = st_sf(mtq_v), y = mtq_c, join=st_intersects)
-mtq_v <- st_cast(mtq_v, "MULTIPOLYGON")
+mtq_v <- st_collection_extract(st_voronoi(x = st_union(mtq_c)))
+mtq_v <- st_intersection(mtq_v, st_union(mtq))
+mtq_v <- st_join(x = st_sf(mtq_v), y = mtq_c)
 plot(st_geometry(mtq_v), col='lightblue')
 ```
 
@@ -203,6 +206,12 @@ plot(st_geometry(mtq_v), col='lightblue')
 - st_equals_exact(x, y,0.001, sparse = FALSE)
 - ...
 
+## Conversion
+- st_cast 
+- st_collection_extract
+- st_sf
+- st_as_sf
+- st_as_sfc
 
 
 ## Autres packages
@@ -229,12 +238,17 @@ Premier exemple les données sont stockées dans un fichier shape file. Tout dev
 library(sf)
 library(dplyr)
 # Import de la couche géographique (iris de Paris)
-iris.fra <- st_read("../data/shp_iris/CONTOURS-IRIS.shp", stringsAsFactors = F) 
-iris.75 <- iris.fra[substr(iris.fra$INSEE_COM, 1,2)=="75",c("CODE_IRIS","INSEE_COM")]
+iris.75 <- st_read("../data/iris_paris.shp", stringsAsFactors = F) 
+```
+
+Regardons la projection utilisée:
+```{r, eval=TRUE,cache=FALSE}
+st_crs(iris.75)
 ```
 
 
-Un autre cas de figure fréquent, des données ponctuelles stockées dans un csv avec deux colonnes : latitude et longitude. Dans ce cas, on importe le csv puis on convertit la `data.frame` en `data.frame` spatiale (`sf`) avec la fonction `st_as_sf`.
+
+Un autre cas de figure fréquent, des données ponctuelles stockées dans un csv avec deux colonnes ( latitude et longitude en wgs 84). Dans ce cas, on importe le csv puis on convertit la `data.frame` en `data.frame` spatiale (`sf`) avec la fonction `st_as_sf`. Il suffit de spécifier le nom des colones contenant les coordonnées et le CRS, généralement on utilisera le code epsg de wgs 84 (4326).
 
 ```{r, eval=TRUE,cache=FALSE, fig.height=5}
 # Import du dataset  
@@ -249,6 +263,7 @@ plot(st_geometry(accidents.2019.paris))
 
 
 
+Regardons rapidement ces deux jeux de données et comptons le nombre de blessés graves par iris.
 
 ```{r, eval=TRUE,cache=FALSE, fig.height=5}
 inter <- st_intersects(iris.75, accidents.2019.paris)
@@ -272,7 +287,7 @@ plot(accidents.2019.paris %>% filter(grav==2),
 ## Utiliser `osmdata`
 
 
-`osmdata` permet d'extraire des éléments de la base de données gratuite et open-source OpenStreetMap. Cela peut nous servir par exemple pour récupérer des élements d'habillage fleuve / routes ou d'autres informations.
+`osmdata` permet d'extraire des éléments de la base de données gratuite et open-source OpenStreetMap. Cela peut nous servir par exemple pour récupérer des élements d'habillage fleuve / routes ou d'autres informations. La requête suit la nomenclature osm sur base de [clés / valeures](https://wiki.openstreetmap.org/wiki/Tags). Vous pouvez utiliser [tagingo](https://taginfo.openstreetmap.org/) pour explorer l'ensemble des clés et valeures utilisées par la communauté OSM.
 
 ```{r, eval=FALSE,cache=FALSE}
 library(osmdata)
@@ -288,7 +303,7 @@ trunk   <- osmdata_sf(qt)
 primary <- osmdata_sf(qp)
 
 roads    <- c(primary,trunk,motorway)$osm_lines %>% st_transform(st_crs(iris.75))
-roads.geom = st_intersection(st_geometry(roads),iris.75) 
+roads.geom = st_geometry(roads)
 
 # Récupérer le shape de la seine 
 qr <- q %>% 
@@ -297,12 +312,10 @@ qr <- q %>%
 river <- osmdata_sf(qr)
 
 river.geom <- c(st_geometry(river$osm_lines),st_geometry(river$osm_multilines)) %>% st_transform(st_crs(iris.75))
-#river.geom <- st_geometry(river$osm_lines %>% filter(name.fr == "La Seine")) %>%
-#  st_transform(st_crs(iris.75))
 
 # Export road and river layers to shapefile
 st_write(roads.geom, dsn = "data/osmdata/road.shp")
-st_write(river.geom, dsn = "lecture/data/osmdata/river.shp")
+st_write(river.geom, dsn = "data/osmdata/river.shp")
 ```
 
 ```{r , echo = FALSE}
@@ -310,6 +323,8 @@ roads.geom <- st_read(dsn = "data/osmdata/road.shp", quiet = TRUE)
 river.geom <- st_read(dsn = "data/osmdata/river.shp", quiet = TRUE)
 ```
 
+
+Utilisons ces données pour habiller un peu notre carte:
 ```{r, eval=TRUE,cache=FALSE, fig.height=4.75}
 # bbox est utilisé pour centrer sur Paris
 bb <- st_bbox(iris.75)
@@ -325,8 +340,11 @@ plot(accidents.2019.paris %>% filter(grav==2) , pch = 20, col = "red", add=TRUE,
 
 ## Géocodage
 
+Géocoder c'est passé d'une adresse à une position géographique. En france, [la Base d'adresse national ](https://adresse.data.gouv.fr/) permet de faire ce travail efficacement, en R le package `banR` permet d'intéroger l'API de la BAN simplement ce package doit être installé via github et permet ensuite de géocoder une colonne d'adresse en batch en spécifiant la colone contenant les adresse et éventuellement une colone contenant un code insee pour faciliter et préciser la requête. Pour des adresses internationales il est possible d'utiliser `tidygeocoder` qui peut intéroger différente API gratuite ou payante et qui fonctionne de manière assez similaire.
+
 ```{r p1, eval=TRUE,cache=TRUE, fig.height=4.75}
 # avec banR
+# remote
 library(banR)
 geo_banR = accidents.2019.paris %>% 
   filter(catv %in% c("VAE","EDP à moteur")) %>% slice(1:10) %>% 
@@ -350,11 +368,8 @@ st_distance(geo_banR,geo_tidygeocoder,by_element = TRUE)
 
 # Faire des cartes interactive avec R  
 
-De nombreuses solutions existent pour faire des cartes avec R :
+De nombreuses solutions existent pour faire des cartes interactives avec R :
 
-- `ggplot2` est un package très utilisé pour faire tous types de graphiques, et a été adapté spécifiquement aux cartes (`geom_sf`). 
-- Le package `tmap` contient des fonctionnalités avancées basées sur la logique de `ggplot2`
-- `map_sf` (anciennement `cartography`) s'appuie sur un langage dit "base R" et permet de faire des représentations cartographiques, basiques comme avancées.
 - `mapview`, `leaflet` et `mapdeck` permettent de faire des cartes interactives. 
 
 Par simplicité, nous nous concentrons ici sur `ggplot2` pour la partie statique et `mapview` pour la partie interactive.
@@ -411,7 +426,12 @@ mapview(accidents.2019.paris %>%
         cex="age", zcol="sexe", lwd=0, alpha=0.9)
 ```
 
-# `ggplot2` et cartes statiques 
+
+# Faire des cartes statiques 
+
+- `ggplot2` est un package très utilisé pour faire tous types de graphiques, et a été adapté spécifiquement aux cartes (`geom_sf`). 
+- Le package `tmap` contient des fonctionnalités avancées basées sur la logique de `ggplot2`
+- `map_sf` (anciennement `cartography`) s'appuie sur un langage dit "base R" et permet de faire des représentations cartographiques, basiques comme avancées.
 
 ## ggplot2
 
@@ -454,6 +474,7 @@ ex : moyenne, comptage, régression
 
 Exemple diagramme en barre :
 ```{r, fig.height=4.75, cache=FALSE}
+library(ggplot2)
 ggplot(accidents.2019.paris)+geom_bar(aes(x=catv,group=sexe,fill=sexe))
 ```
 
@@ -489,9 +510,11 @@ ggplot(gg)+geom_point(aes(y=lum,x=sexe,color=prop,size=prop))+
 Ou bien encore :
 ```{r, fig.height=4.75, cache=FALSE}
 library(tidyr)
+catv_sel = c("Bicyclette","VL seul","VAE","VU seul","EDP à moteur","Scooter < 50 cm3")
+
 gg = accidents.2019.paris %>% 
   st_drop_geometry %>% 
-  filter(catv %in% c("Bicyclette","VL seul","VU seul","EDP à moteur","Scooter < 50 cm3")) %>% 
+  filter(catv %in% catv_sel) %>% 
   count(catv,sexe) %>% pivot_wider(names_from = "sexe",values_from="n")
 
 ggplot(gg) + geom_segment(aes(x="Homme",y=Masculin,xend="Femme",yend=Féminin,color=catv)) 
@@ -508,10 +531,9 @@ ggplot(gg)+
 
 ## Intégrer des données spatiales avec `geom_sf`
 
-## Cartes avec ronds proportionnels
+### Cartes avec ronds proportionnels
 
 ```{r, fig.height=4.75, cache=FALSE}
-library(ggplot2)
 ggplot() +
   geom_sf(data = iris.75,colour = "ivory3",fill = "ivory") +
   geom_sf(data = river.geom, colour = "azure",size=2) +
@@ -525,54 +547,38 @@ ggplot() +
            xlim = st_bbox(iris.75)[c(1,3)],
            ylim = st_bbox(iris.75)[c(2,4)]) +
   theme_minimal() +
-  theme(panel.background = element_rect(fill = "azure",color=NA)) +
+  theme(panel.background = element_rect(fill = "ivory",color=NA),
+        plot.background = element_rect(fill = "ivory",color=NA)) +
   labs(title = "Nombre d'accidents de la route à Paris par iris",
        caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021",x="",y="")
 ```
 
 
-### Cartes avec choroplethes
-
-```{r, fig.height=4.75, cache=FALSE}
-library(RColorBrewer)
-bks <- c(0,round(quantile((100*iris.75$nbacc_blessgravtues/iris.75$nbacc)[iris.75$nbacc_blessgravtues!=0], na.rm=TRUE, probs=seq(0,1,0.2)),0))
-pal <- c("#FFFFFF",brewer.pal(length(bks)-1,"Reds"))
-
-ggplot() +
-  geom_sf(data = iris.75,colour = "ivory3",fill = "ivory") +
-  geom_sf(data = iris.75, aes(fill = 100*nbacc_blessgravtues/nbacc), colour = "grey80") +
-  geom_sf(data = river.geom, colour = "azure",size=2) +
-  geom_sf(data = roads.geom, colour = "#666666",size=0.5) +
-   scale_fill_gradientn(name = "Part (En %)", 
-                       values=bks/max(bks),
-                       colours = pal) +
-  coord_sf(crs = 2154, datum = NA,
-           xlim = st_bbox(iris.75)[c(1,3)],
-           ylim = st_bbox(iris.75)[c(2,4)]) +
-  theme_minimal() +
-  theme(panel.background = element_rect(fill = "azure",color=NA)) +
-  labs(title = "Part des Accidents avec blessés graves et morts par iris à Paris",
-       caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021", x="",y="")
-```
+### Cartes choroplethes
 
 ```{r, fig.height=4.75, cache=FALSE}
 library(RColorBrewer)
 
 acc = iris.75 %>% 
   st_join(accidents.2019.paris) %>% 
-  group_by(CODE_IRIS) %>% 
-  summarize(nb_acc=n(),nb_vl=sum(if_else(catv=="VL seul",1,0)))
+  group_by(INSEE_COM,do_union=TRUE) %>% 
+  summarize(nb_acc=n(),
+            nb_vl=sum(if_else(catv=="VL seul",1,0),na.rm = TRUE),
+            nb_edp=sum(if_else(catv=="EDP à moteur",1,0),na.rm = TRUE),
+            nb_velo=sum(if_else(catv=="Bicyclette",1,0),na.rm = TRUE))
 
 
-bks <- round(quantile(100*acc$nb_vl/acc$nb_acc, na.rm=TRUE, probs=seq(0,1,0.2)))
+acc
+
+bks <- round(10*quantile(100*acc$nb_velo/acc$nb_acc, na.rm=TRUE, probs=seq(0,1,0.2)))/10
 bks
 
-acc = acc %>% mutate(txaccvl = cut(100*nb_vl/nb_acc,bks)) 
-pal <- c("#FFFFFF",brewer.pal(length(bks)-1,"Reds"))
+acc = acc %>% mutate(txaccvelo= 100*nb_velo/nb_acc,txaccvelo_cat = cut(txaccvelo,bks)) 
+
 
 ggplot() +
   geom_sf(data = iris.75,colour = "ivory3",fill = "ivory") +
-  geom_sf(data = acc, aes(fill = txaccvl)) +
+  geom_sf(data = acc, aes(fill = txaccvelo_cat)) +
   geom_sf(data = river.geom, colour = "#87cdde",size=2) +
   geom_sf(data = roads.geom, colour = "#666666",size=0.5) +
   scale_fill_brewer(name = "Part (En %)",palette = "Reds", na.value = "grey80") +
@@ -580,8 +586,10 @@ ggplot() +
            xlim = st_bbox(iris.75)[c(1,3)],
            ylim = st_bbox(iris.75)[c(2,4)]) +
   theme_minimal() +
-  theme(panel.background = element_rect(fill = "ivory",color=NA)) +
-  labs(title = "Part des Accidentés velos par iris à Paris",
+  theme(panel.background = element_rect(fill = "ivory",color=NA),
+        plot.background = element_rect(fill = "ivory",color=NA)) +
+  labs(title = "Part des Accidentés à vélos",
+       subtitle = "par arrondissement à Paris en 2019",
        caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021", x="",y="")
 ```
 

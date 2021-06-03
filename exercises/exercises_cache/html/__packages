@@ -1,0 +1,10 @@
+base
+knitr
+sf
+dplyr
+mapview
+osmdata
+RColorBrewer
+ggplot2
+readr
+ggspatial
