@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 data/shp_iris
+exercises/exercises_cache
+exercises/rosm.cache
+lecture/lecture_cache

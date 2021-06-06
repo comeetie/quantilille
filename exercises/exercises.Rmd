@@ -91,7 +91,7 @@ Importer la carte des iris[^1] 'iris.75.shp' de Paris.
 ```
 
 
-[^1]: Iris est un zonage statistique de l'Insee dont l'acronyme signifie « Ilots Regroupés pour l'Information Statistique ». Leur taille est de 2000 habitants par unité.
+[^1]: Les iris sont un zonage statistique de l'Insee dont l'acronyme signifie « Ilots Regroupés pour l'Information Statistique ». Leur taille est de 2000 habitants par unité.
 
 ```{block, opts.label = "clues"}
 Utilisez la fonction `sf::st_read()`.
@@ -99,7 +99,7 @@ Utilisez la fonction `sf::st_read()`.
 
 ```{r, solution = TRUE}
 library(sf)
-iris.75 <- st_read("data/iris_75.shp")
+iris.75 <- st_read("data/iris_75.shp", quiet = TRUE)
 ```
 
 
@@ -141,7 +141,8 @@ Utilisez `sf::st_read()` et `sf::st_geometry()`. Vous pouvez aussi customiser la
 ```
 
 ```{r, sm=TRUE, solution = TRUE}
-accidents.2019.paris <- st_read("../data/accidents2019_paris.geojson")
+accidents.2019.paris <- st_read("data/accidents2019_paris.geojson",
+                                quiet = TRUE)
 ```
 
 ```{r, sm=TRUE, eval=FALSE, solution = TRUE}
@@ -167,10 +168,10 @@ Utilisez `sf::st_intersects()` et `sapply()`.
 
 Documentation de la variable `grav` : Gravité de blessure de l'usager, les usagers accidentés sont classés en trois catégories de victimes plus les indemnes :
 
-1 : Indemne
-2 : Tué
-3 : Blessé hospitalisé
-4 : Blessé léger
+- 1 : Indemne
+- 2 : Tué
+- 3 : Blessé hospitalisé
+- 4 : Blessé léger
 
 ```
 
@@ -239,7 +240,8 @@ Par exemple, vous pouvez utiliser les paramètres `map.types`, `col.regions`, `l
 library(mapview)
 library(sf)
 
-accidents.2019.paris <- st_read("data/accidents2019_paris.geojson")
+accidents.2019.paris <- st_read("data/accidents2019_paris.geojson", 
+                                quiet = TRUE)
 mapview(accidents.2019.paris, map.types = "OpenStreetMap",
         col.regions = "#940000",
         label = accidents.2019.paris$Num_Acc,
@@ -250,7 +252,8 @@ mapview(accidents.2019.paris, map.types = "OpenStreetMap",
 ```{r, nm=TRUE, eval=TRUE, echo=FALSE}
 library(mapview)
 library(sf)
-accidents.2019.paris <- st_read("../data/accidents2019_paris.geojson")
+accidents.2019.paris <- st_read("data/accidents2019_paris.geojson",
+                                quiet = TRUE)
 mapview(accidents.2019.paris, map.types = "OpenStreetMap",
         col.regions = "#940000",
         label = accidents.2019.paris$Num_Acc,
@@ -262,7 +265,7 @@ mapview(accidents.2019.paris, map.types = "OpenStreetMap",
 
 1. Utilisez les polygones de ‘iris.75’ pour extraire la "bounding box" de Paris en projection WGS84. 
 
-2. Récupérez ensuite grâce à `osmdata`, à l'intérieur de cette bounding box", le fond de carte du périphérique parisien (`key = "highway"`, `value = "trunk"`)
+2. Récupérez ensuite grâce à `osmdata`, à l'intérieur de cette *bounding box*, le fond de carte du périphérique parisien (`key = "highway"`, `value = "trunk"`)
 
 3. Faites l'intersection entre les accidents et le périphérique, en prenant soin d'ajouter une zone tampon de 50 mètres autour de ce dernier et appeler ce nouvel ensemble de points `accidents.2019.paris.periph`.
 ```
@@ -287,23 +290,25 @@ q       <- opq(bbox = bb,timeout = 180)
 #2. périphérique
 qt      <- add_osm_feature (q, key = 'highway',value = 'trunk', value_exact = FALSE)
 roads    <- c(osmdata_sf(qt))$osm_lines %>% st_transform(st_crs(iris.75))
+Encoding(roads$name) <- "UTF-8" #si problème d'encodage
 
 #3. zone tampon et intersection
-accidents.2019.paris.periph <- st_intersection(accidents.2019.paris,
-                                               st_intersection(st_geometry(roads),iris.75)  %>%
-                                                 st_buffer(dist = 50) %>%
-                                                 st_union()
+
+# Méthode 1
+accidents.2019.paris.periph <- st_intersection(
+  accidents.2019.paris,
+  st_intersection(st_geometry(roads),iris.75)  %>% st_buffer(dist = 50) %>% st_union()
 )  
 
-periph = st_geometry(roads %>% filter(name=="Boulevard Périphérique Extérieur"))
+# Méthode 2
+periph <- st_geometry(roads %>% filter(name=="Boulevard Périphérique Extérieur"))
 
-  
-
-
-periph_count=st_sf(periph %>% st_buffer(50),id=1:length(periph)) %>% st_join(accidents.2019.paris) %>% count(id)
+periph_count <- st_sf(periph %>% st_buffer(50),
+                      id=1:length(periph)) %>%
+  st_join(accidents.2019.paris) %>% count(id)
 ```
 
-```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+```{block, box.title = "3", box.body = list(fill = "white"), box.icon = "fa-star"}
 Affichez les positions des 2 073 personnes victimes d'un accident à Paris **SUR LE PERIPHERIQUE** en 2019 grâce au package `mapview`. Essayez à nouveau d'utiliser différents paramètres pour customiser votre carte.
 ```
 
@@ -321,10 +326,19 @@ mapview(accidents.2019.paris.periph, map.types = "OpenStreetMap",
         homebutton = FALSE, lwd = 0.2)
 ```
 
+```{r, nm=TRUE, eval=TRUE, echo=FALSE}
+library(mapview)
+library(sf)
+
+mapview(accidents.2019.paris.periph, map.types = "OpenStreetMap",
+        col.regions = "#940000",
+        color = "white", legend = TRUE, layer.name = "Accidents sur le périphérique à Paris en 2019",
+        homebutton = FALSE, lwd = 0.2)
+```
 
 ## Bonus : compter les points dans une grille
 
-```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
+```{block, box.title = "4", box.body = list(fill = "white"), box.icon = "fa-star"}
 Utiliser la fonction `pt_in_grid` ci-dessous pour compter le nombre de personnes accidentées dans des cellules de 500m de côté.
 
 Utilisez `mapview` pour afficher la grille choroplèthe.
@@ -384,7 +398,7 @@ Nous aimerions créer avec le package `ggplot2` une carte des arrondissements de
 ```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
 Préparation des données : 
 
-* Chargez le fond de carte 'com75_shp' (qui contient le nombre de personnes accidentées, en tout et non blessées, dans chaque arrondissement) et créez une variable appelée *part_non_blesses* qui correspond à la part des personnes non blessées parmi les accidentées dans chaque arrondissement.  
+* Chargez le fond de carte 'com75_shp' (qui contient le nombre de personnes accidentées, en tout et non blessées, dans chaque arrondissement) et créez une variable appelée *part_non_blesses* qui correspond à la part des personnes non blessées parmi les accidentés dans chaque arrondissement.  
 * Créez un vecteur des quartiles de la variable *part_non_blesses*.   
 * Créez le vecteur de couleur qui correspond au nombre de classes définies plus tôt. 
 * Ajouter une variable appelée *typo* à 'com.75' qui indique la classe de l'arrondissement selon la discrétisation contenue dans *bks* pour la variable  *part_non_blesses*.  
@@ -411,7 +425,12 @@ cols <- brewer.pal(length(bks)-1,"Greens")
 # For ggplot2 maps - Create a "typo" variable
 library(dplyr)
 com.75 <- com.75 %>%
-  mutate(typo = cut(part_non_blesses, breaks = bks,labels = paste0(round(bks[1:(length(bks)-1)])," à ",round(bks[2:length(bks)])),
+  mutate(typo = cut(part_non_blesses,
+                    breaks = bks,
+                    labels = paste0(
+                      round(bks[1:(length(bks)-1)]),
+                      " à ",round(bks[2:length(bks)])
+                      ),
                     include.lowest = TRUE))
 ```
 
@@ -472,92 +491,173 @@ map_ggplot <- ggplot() +
 plot(map_ggplot)
 ```
 
+# Exercice 4 : Données Airbnb
 
-# Exercice 4 : Bonus
+Ce dernier exercice s'appuie sur les données des listings Airbnb à Paris. 
 
-Ce dernier exercice va s'appuyer sur les données des listings AirBnB à paris. Disponniblent sur le site [Inside AirBnB](http://insideairbnb.com/).
+Elle sont disponibles sur le site [Inside Airbnb](http://insideairbnb.com/).
 
 ```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
-Préparation des données Air BnB: 
+Préparation des données Airbnb : 
 
 * Chargez le fichier `listings.csv` et convertissez le en data.frame `sf`.
 * Explorez un peu ces données avec `mapview`
-* Projetez le en Lambert 93 (code epsg 2154)
-
+* Projetez le en Lambert 93 (code epsg `2154`)
 ```
 
-```{r, echo=FALSE,cache=TRUE}
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
 library(readr)
-listings = read_csv("../data/listings.csv") %>% 
-  st_as_sf(coords = c("longitude", "latitude"),crs = 4326, agr = "constant")
+library(dplyr)
+library(sf)
+listings <- read_csv("data/listings.csv") %>% 
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326,
+           agr = "constant")
 
-listings.l93 = st_transform(listings,2154)
-plot(listings.l93 %>% st_geometry(),col="#88888822")
-
+listings.l93 <- st_transform(listings,2154)
+plot(listings.l93 %>% st_geometry(), col="#88888822")
 ```
+
+```{r, nm=TRUE, eval=TRUE, echo=FALSE}
+library(readr)
+library(dplyr)
+library(sf)
+listings <- read_csv("data/listings.csv") %>% 
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326,
+           agr = "constant")
+
+listings.l93 <- st_transform(listings,2154)
+plot(listings.l93 %>% st_geometry(), col="#88888822")
+```
+
 
 ```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
-Préparation des données OSM
+Préparation des données OSM :
 
-* Récupérez les localisations des stations de métros de Paris via osm data (key = 'station',value = 'subway).
-* Faites en une data.frame spatiale propre et filtrez la pour ne conservez que la ligne avec un champ name de renseigné et supprimez les doublons éventuelles (sur le champ nom).
-* Projetez la en Lambert 93 (code epsg 2154)
+* Récupérez les localisations des stations de métros de Paris via le package `osm data` (`key = 'station'`, `value = 'subway'`).
+* Faites en un data.frame spatiale propre 
+    * filtrez-la pour ne conserver que les lignes dont le champ `name` est renseigné
+    * supprimez les doublons éventuels (sur le champ `name`).
+* Projetez-la en Lambert 93 (code epsg `2154`). Appelez cet objet `subway.l93`.
 ```
 
-
-
-```{r, echo=FALSE,cache=TRUE}
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+library(osmdata)
 bb      <- listings %>% st_bbox()
 q       <- opq(bbox = bb,timeout = 180)
-qm      <- add_osm_feature (q, key = 'station',value = 'subway', value_exact = FALSE)
+qm      <- add_osm_feature (q, key = 'station',
+                            value = 'subway',
+                            value_exact = FALSE)
 subway  <- osmdata_sf(qm)
-subway.l93 = st_transform(subway$osm_points,2154) %>% filter(!is.na(name),!duplicated(name))
+subway.l93  <- st_transform(subway$osm_points,2154) %>%
+  filter(!is.na(name),!duplicated(name))
+Encoding(subway.l93$name) <- "UTF-8" #pour les problèmes d'encodage
+plot(subway.l93 %>% st_geometry(), pch = 20, col = "red",  cex = 1)
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=FALSE, cache = TRUE}
+library(osmdata)
+bb      <- listings %>% st_bbox()
+q       <- opq(bbox = bb,timeout = 180)
+qm      <- add_osm_feature (q, key = 'station',
+                            value = 'subway',
+                            value_exact = FALSE)
+subway  <- osmdata_sf(qm)
+subway.l93  <- st_transform(subway$osm_points,2154) %>%
+  filter(!is.na(name),!duplicated(name))
+Encoding(subway.l93$name) <- "UTF-8" #pour les problèmes d'encodage
 plot(subway.l93 %>% st_geometry(), pch = 20, col = "red",  cex = 1)
 ```
 
 ```{block, box.title = "3", box.body = list(fill = "white"), box.icon = "fa-star"}
-Préparation des Voronoi
+Préparation des polygones de Voronoï : 
 
-* Créez les voronoi associés aux stations de métros
-* Faites l'interstection entre ces voronois et la bounding-box des listings
-* Créez a partir de ces polygones une data.frame `sf` avec l'id osm des stations de métros ainsi que leurs noms.
+1. Créez les polygones de Voronoï associés aux stations de métro ;
+2. Faites l'intersection entre ces voronoïs et la bounding box des listings. Cet objet s'appellera `subway.voronoi`.
 ```
 
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+# 1. Création des polygones de Voronoïs
+subway.voronoi <- st_collection_extract(
+  st_voronoi(x = st_union(subway.l93 %>% st_geometry()))
+  )
+# 2. Bounding box et intersection
+bb <- st_as_sfc(st_bbox(listings.l93),crs=2154)
+subway.voronoi <- subway.voronoi %>% st_intersection(bb)    
 
-```{r, echo=FALSE}
-subway.voronoi = st_collection_extract(st_voronoi(x = st_union(subway.l93 %>% st_geometry())))
-bb = st_as_sfc(st_bbox(listings.l93),crs=2154)
-subway.voronoi = subway.voronoi %>% st_intersection(bb)    
-                                
+# Carte pour visualiser                                 
+plot(subway.voronoi) # Contour des voronoi
+plot(listings.l93 %>% st_geometry(),
+     pch = 20, cex = 1,add=TRUE,col="#55555511") #Listings airbnb
+plot(subway.l93 %>% st_geometry(),
+     pch = 20, col = "red", add=TRUE, cex = 1) #Stations de métro
+```
 
-plot(subway.voronoi)
-plot(listings.l93 %>% st_geometry(), pch = 20, cex = 1,add=TRUE,col="#55555511")
-plot(subway.l93 %>% st_geometry(), pch = 20, col = "red", add=TRUE, cex = 1)
+```{r, nm=TRUE, eval=TRUE, echo=FALSE}
+# 1. Création des polygones de Voronois
+subway.voronoi <- st_collection_extract(
+  st_voronoi(x = st_union(subway.l93 %>% st_geometry()))
+  )
+# 2. Bounding box et intersection
+bb <- st_as_sfc(st_bbox(listings.l93),crs=2154)
+subway.voronoi <- subway.voronoi %>% st_intersection(bb)    
+
+# Carte pour visualiser                                 
+plot(subway.voronoi) # Contour des voronoi
+plot(listings.l93 %>% st_geometry(),
+     pch = 20, cex = 1,add=TRUE,col="#55555511") #Listings airbnb
+plot(subway.l93 %>% st_geometry(),
+     pch = 20, col = "red", add=TRUE, cex = 1) #Stations de métro
 ```
 
 ```{block, box.title = "4", box.body = list(fill = "white"), box.icon = "fa-star"}
-Résumé statistique
+Résumé statistique :
 
-* Aggrégez les listings sur les voronois et calculez le nombre d'annonce, le prix moyen et median ainsi que la variance des prix.
+1. Créez l'objet `subway.poly`, un data.frame `sf` créé à partir des polygones `subway.voronoi`, qui continent l'identifiant osm des stations de métro, ainsi que leurs noms (contenus dans `subway.l93`).
+2. Agrégez les listings sur les voronoïs et calculez le nombre d'annonces, le prix moyen et médian, ainsi que la variance des prix.
 ```
 
-```{r, echo=FALSE,cache=TRUE,fig.width=6}
-subway.poly = subway.l93 %>% select(osm_id,name)
-subway.poly$geometry = subway.voronoi
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE, cache=TRUE, fig.width=6}
+# 1. Création de subway.poly
+subway.poly <- subway.l93 %>% select(osm_id,name)
+subway.poly$geometry <- subway.voronoi
 
-sel_metro = 
-    c('Saint-Lazare','École Militaire','Saint-Germain-des-Prés','Rennes','Denfert-Rochereau','Colonel Fabien','Saint-Placide','Oberkampf',"Place d'Italie",'La Tour Maubourg','Les Halles','Filles du Calvaire','Mairie des Lilas','Porte de la Villette',"Porte d'Italie",'Montparnasse-Bienvenüe','Balard','Château Rouge',"Gare d'Austerlitz","Gare de l'Est",'Palais Royal - Musée du Louvre','Boulogne - Pont de Saint-Cloud','Richard Lenoir','Strasbourg - Saint-Denis','Gare de Lyon','Poissonnière','Tolbiac','Gare du Nord (Métro)')
-
-
-listings.voronoi = subway.poly %>% st_join(listings.l93) %>% 
+# 2. Agrégation des listings
+## Au niveau des polygones
+listings.voronoi <- subway.poly %>% st_join(listings.l93) %>% 
   group_by(osm_id,name.x) %>% 
   summarize(n=n(),
             price_med=median(price,na.rm=TRUE),
             price_mean=mean(price,na.rm=TRUE),
             price_sd=sd(price,na.rm=TRUE))
+head(listings.voronoi)
 
+## Au niveau des centroïdes
+subway.point <- subway.l93 %>%
+  select(osm_id,name) %>%
+  left_join(listings.voronoi %>% st_drop_geometry())
+```
 
-subway.point = subway.l93 %>% select(osm_id,name) %>% left_join(listings.voronoi %>% st_drop_geometry())
+```{r, nm=TRUE, eval=TRUE, echo=FALSE, cache=TRUE, fig.width=6}
+# 1. Création de subway.poly
+subway.poly <- subway.l93 %>% select(osm_id,name)
+subway.poly$geometry <- subway.voronoi
+
+# 2. Agrégation des listings
+## Au niveau des polygones
+listings.voronoi <- subway.poly %>% st_join(listings.l93) %>% 
+  group_by(osm_id,name.x) %>% 
+  summarize(n=n(),
+            price_med=median(price,na.rm=TRUE),
+            price_mean=mean(price,na.rm=TRUE),
+            price_sd=sd(price,na.rm=TRUE))
+head(listings.voronoi)
+
+## Au niveau des centroïdes
+subway.point <- subway.l93 %>%
+  select(osm_id,name) %>%
+  left_join(listings.voronoi %>% st_drop_geometry())
 ```
 
 ```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
@@ -565,23 +665,81 @@ Essayez de reproduire cette figure :
 ```
 
 ```{r, echo=FALSE}
-sel_metro=c('Filles du Calvaire','Colonel Fabien','Saint-Placide','Rennes','Les Halles','Tolbiac','Denfert-Rochereau','Oberkampf','Montparnasse-Bienvenüe','La Tour Maubourg','Mairie des Lilas','École Militaire','Saint-Germain-des-Prés','Boulogne - Pont de Saint-Cloud',"Gare de l'Est","Place d'Italie",'Richard Lenoir','Saint-Lazare','Porte de la Villette','Palais Royal - Musée du Louvre','Château Rouge','Gare du Nord (Métro)','Strasbourg - Saint-Denis','Poissonnière','Balard','Gare de Lyon',"Porte d'Italie","Gare d'Austerlitz")
+sel_metro <-  c('Saint-Lazare','École Militaire',
+                'Saint-Germain-des-Prés','Rennes',
+                'Denfert-Rochereau','Colonel Fabien',
+                'Saint-Placide','Oberkampf',"Place d'Italie",
+                'La Tour Maubourg','Les Halles',
+                'Filles du Calvaire','Mairie des Lilas',
+                'Porte de la Villette',"Porte d'Italie",
+                'Montparnasse-Bienvenüe','Balard','Château Rouge',
+                "Gare d'Austerlitz","Gare de l'Est",
+                'Palais Royal - Musée du Louvre',
+                'Boulogne - Pont de Saint-Cloud','Richard Lenoir',
+                'Strasbourg - Saint-Denis','Gare de Lyon',
+                'Poissonnière','Tolbiac','Gare du Nord (Métro)')
 
-gg = subway.poly %>% st_join(listings.l93) %>% st_drop_geometry() %>% 
-  filter(name.x %in% sel_metro, price<750) %>%  
+gg <- subway.poly %>% st_join(listings.l93) %>% 
+  st_drop_geometry() %>% 
+  filter(name.x %in% sel_metro, price < 750) %>%  
   mutate(name.x=factor(name.x,levels=sel_metro))
-ggplot(gg)+geom_boxplot(aes(y=name.x,x=price))+theme_bw()+labs(title="Répartition des prix d'une nuité",
-       subtitle=" à proximité de certaines stations de métro ",caption = "fichier inside airBnB,\nantuki & comeetie, 2021", x="Prix d'une nuité (€)",y="")
+
+library(ggplot2)
+ggplot(gg) +
+  geom_boxplot(aes(y = name.x, x = price)) + 
+  theme_bw()+ 
+  labs(title = "Répartition des prix d'une nuitée à Paris",
+       subtitle = "à proximité de certaines stations de métro",
+       caption = "fichier inside Airbnb,\nantuki & comeetie, 2021",
+       x = "Prix d'une nuitée (€)",y = "")
 ```
 
-```{block, box.title = "6", box.body = list(fill = "white"), box.icon = "fa-star"}
-Vous pourez vous servir de ce vecteur de sélection de quelques stations de métro:
+```{block, opts.label = "information"}
+Vous pouvez vous servir de ce vecteur de sélection de quelques stations de métro. 
+
+`sel_metro <- c('Filles du Calvaire', 'Colonel Fabien','Saint-Placide','Rennes', 'Les Halles','Tolbiac',`
+`'Denfert-Rochereau','Oberkampf','Montparnasse-Bienvenüe','La Tour Maubourg','Mairie des Lilas',`
+`'École Militaire','Saint-Germain-des-Prés','Boulogne - Pont de Saint-Cloud',"Gare de l'Est", "Place d'Italie",`
+`'Richard Lenoir','Saint-Lazare','Porte de la Villette','Palais Royal - Musée du Louvre','Château Rouge',`
+`'Gare du Nord (Métro)','Strasbourg - Saint-Denis', 'Poissonnière','Balard','Gare de Lyon',"Porte d'Italie",`
+`'Gare d'Austerlitz')`
 ```
 
-```{r, eval=FALSE}
-sel_metro=c('Filles du Calvaire','Colonel Fabien','Saint-Placide','Rennes','Les Halles','Tolbiac','Denfert-Rochereau','Oberkampf','Montparnasse-Bienvenüe','La Tour Maubourg','Mairie des Lilas','École Militaire','Saint-Germain-des-Prés','Boulogne - Pont de Saint-Cloud',"Gare de l'Est","Place d'Italie",'Richard Lenoir','Saint-Lazare','Porte de la Villette','Palais Royal - Musée du Louvre','Château Rouge','Gare du Nord (Métro)','Strasbourg - Saint-Denis','Poissonnière','Balard','Gare de Lyon',"Porte d'Italie","Gare d'Austerlitz")
+
+```{block, opts.label = "clues"}
+Utilisez la fonction `ggplot2::geom_boxplot()` pour faire une boîte à moustache. Et mettez en place la grammaire des graphiques dans ce cas précis.
 ```
 
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+sel_metro <- c('Filles du Calvaire',
+               'Colonel Fabien','Saint-Placide','Rennes',
+               'Les Halles','Tolbiac','Denfert-Rochereau',
+               'Oberkampf','Montparnasse-Bienvenüe',
+               'La Tour Maubourg','Mairie des Lilas',
+               'École Militaire','Saint-Germain-des-Prés',
+               'Boulogne - Pont de Saint-Cloud',"Gare de l'Est",
+               "Place d'Italie",'Richard Lenoir','Saint-Lazare',
+               'Porte de la Villette','Palais Royal - Musée du Louvre',
+               'Château Rouge','Gare du Nord (Métro)',
+               'Strasbourg - Saint-Denis','Poissonnière',
+               'Balard','Gare de Lyon',"Porte d'Italie",
+               "Gare d'Austerlitz")
+
+
+gg <- subway.poly %>% st_join(listings.l93) %>% 
+  st_drop_geometry() %>% 
+  filter(name.x %in% sel_metro, price < 750) %>%  
+  mutate(name.x=factor(name.x,levels=sel_metro))
+
+library(ggplot2)
+ggplot(gg) +
+  geom_boxplot(aes(y = name.x, x = price)) + 
+  theme_bw()+ 
+  labs(title = "Répartition des prix d'une nuitée à Paris",
+       subtitle = "à proximité de certaines stations de métro",
+       caption = "fichier inside Airbnb,\nantuki & comeetie, 2021",
+       x = "Prix d'une nuitée (€)",y = "")
+```
 
 ```{block, box.title = "7", box.body = list(fill = "white"), box.icon = "fa-star"}
 Essayez de reproduire cette carte :
@@ -591,22 +749,23 @@ Essayez de reproduire cette carte :
 
 
 ```{r, echo=FALSE,fig.height=8, fig.width=9}
+bks <- round(quantile(subway.point$price_med,
+                      na.rm=TRUE,
+                      probs=seq(0,1,0.2)))
+subway.point <- subway.point %>%
+  mutate(price_cat= cut(price_med,bks))
 
-
-bks <- round(quantile(subway.point$price_med, na.rm=TRUE, probs=seq(0,1,0.2)))
-subway.point = subway.point %>% mutate(price_cat= cut(price_med,bks))
-
-roads.geom <- st_read(dsn = "../lecture/data/osmdata/road.shp", quiet = TRUE)
-river.geom <- st_read(dsn = "../lecture/data/osmdata/river.shp", quiet = TRUE)
+roads.geom <- st_read(dsn = "data/road.shp", quiet = TRUE)
+river.geom <- st_read(dsn = "data/river.shp", quiet = TRUE)
 
 library(ggplot2)
 library(ggspatial)
 ggplot(subway.point)+
-  geom_sf(aes(size=n,color=price_cat))+
+  geom_sf(aes(size=n,color=price_cat)) + 
   geom_sf(data = river.geom, colour = "#87cdde",size=2) +
   geom_sf(data = roads.geom, colour = "#666666",size=0.5) +
   geom_sf_text(data=subway.point%>% arrange(desc(n)) %>% head(),aes(label=name))+
-  scale_color_brewer("Prix médian",palette="Greens")+
+  scale_color_brewer("Prix médian",palette="Greens") + 
   scale_size(name = "Nombre d'hôtes",
              breaks = c(1,100,250,500,750),
              range = c(0,5)) +
@@ -616,10 +775,50 @@ ggplot(subway.point)+
   theme_minimal() +
   theme(panel.background = element_rect(fill = "ivory",color=NA),
         plot.background = element_rect(fill = "ivory",color=NA)) +
-  labs(title = "Prix median d'une nuitée Air BnB",
+  labs(title = "Prix médian d'une nuitée Airbnb",
        subtitle = "suivant la station de métro la plus proche.",
-       caption = "fichier inside AirBnB, \nantuki & comeetie, 2021",x="",y="")
+       caption = "fichier inside Airbnb, \nantuki & comeetie, 2021",
+       x = "",y = "")
 ```
+
+```{block, opts.label = "clues"}
+Les étiquettes s'affichent avec `geom_sf_text` et correspondent aux 10 lieux avec le plus d'hôtes. 
+```
+
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+bks <- round(quantile(subway.point$price_med,
+                      na.rm=TRUE,
+                      probs=seq(0,1,0.2)))
+subway.point <- subway.point %>%
+  mutate(price_cat= cut(price_med,bks))
+
+roads.geom <- st_read(dsn = "data/road.shp", quiet = TRUE)
+river.geom <- st_read(dsn = "data/river.shp", quiet = TRUE)
+
+library(ggplot2)
+library(ggspatial)
+ggplot(subway.point)+
+  geom_sf(aes(size=n,color=price_cat)) + 
+  geom_sf(data = river.geom, colour = "#87cdde",size=2) +
+  geom_sf(data = roads.geom, colour = "#666666",size=0.5) +
+  geom_sf_text(data=subway.point%>% arrange(desc(n)) %>% head(),aes(label=name))+
+  scale_color_brewer("Prix médian",palette="Greens") + 
+  scale_size(name = "Nombre d'hôtes",
+             breaks = c(1,100,250,500,750),
+             range = c(0,5)) +
+  coord_sf(crs = 2154, datum = NA,
+           xlim = st_bbox(listings.l93)[c(1,3)],
+           ylim = st_bbox(listings.l93)[c(2,4)]) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "ivory",color=NA),
+        plot.background = element_rect(fill = "ivory",color=NA)) +
+  labs(title = "Prix médian d'une nuitée Airbnb",
+       subtitle = "suivant la station de métro la plus proche.",
+       caption = "fichier inside Airbnb, \nantuki & comeetie, 2021",
+       x = "",y = "")
+```
+
+
 --------------------------------------------
 
 --------------------------------------------

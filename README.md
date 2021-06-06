@@ -7,7 +7,7 @@ Kim Antunez (@antuki) et Etienne Côme (@comeetie)
 Cet atelier est composé de deux parties :
 
 - Un [cours magistral](https://comeetie.github.io/quantilille/lecture/lecture.html) ;
-- Un [tutoriel](https://comeetie.github.io/quantilille/exercises/exercices.html)  
+- Un [tutoriel](https://comeetie.github.io/quantilille/exercises/exercises.html)  
 
 ## Données
 
@@ -26,7 +26,7 @@ Les fonds de cartes proviennent de l'[IGN](https://geoservices.ign.fr/documentat
 
 ### Crédits
 
-Cette présentation s'inspire très fortement, ainsi que son tutoriel, d'une [précédente formation](https://github.com/comeetie/satRday) donnée par les mêmes auteurs avec Timothée Giraud (@RCarto). 
+Cette présentation s'inspire, ainsi que son tutoriel, d'une [précédente formation](https://github.com/comeetie/satRday) donnée par les mêmes auteurs avec Timothée Giraud (@RCarto). 
 
 This material may be reused under © 2021 Kim Antunez & Etienne Côme [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 
