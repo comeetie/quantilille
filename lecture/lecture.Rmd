@@ -41,13 +41,15 @@ library(sf)
 #importer
 mtq <- read_sf("data/mtq/martinique.shp")
 mtq <- st_read("data/mtq/martinique.shp")
+```
+
+```{r, eval=FALSE}
 #exporter
 write_sf(mtq,"data/mtq/martinique.gpkg",delete_layer = TRUE)
 st_write(mtq,"data/mtq/martinique.gpkg",delete_layer = TRUE)
 ```
 
-
-## Système de coordonées
+## Système de coordonnées
 Les projections/système de coordonées sont répertoriées grâce à un code appelé code epsg :
 
 - lat/long : 4326 https://epsg.io/4326

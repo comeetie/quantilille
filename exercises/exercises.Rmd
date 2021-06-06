@@ -84,7 +84,7 @@ download.file("https://github.com/comeetie/quantilille/blob/master/exercises/dat
 unzip("data.zip",exdir=".") 
 ```
 
-# Exercice 1 : Manipuler des objets `sf` et les `data.frame` associés
+# Exercice 1 : Manipuler des objets `sf`
 
 ```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
 Importer la carte des iris[^1] 'iris.75.shp' de Paris.
@@ -99,7 +99,8 @@ Utilisez la fonction `sf::st_read()`.
 
 ```{r, solution = TRUE}
 library(sf)
-iris.75 <- st_read("data/iris_75.shp", quiet = TRUE)
+iris.75 <- st_read("../data/iris_paris.shp", quiet = TRUE,
+                   stringsAsFactors = F)
 ```
 
 
@@ -159,12 +160,18 @@ plot(st_geometry(accidents.2019.paris), col = "red", pch = 20, cex = .2, add=TRU
 title("Accidents à Paris")
 ```
 
-```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
-Comptez le nombre de personnes accidentées par iris ainsi que le nombre de personnes accidentées mais non blessées.
+# Exercice 2 : Intersections, Agrégations
+
+Cet exercice vient dans le prolongement de l'exercice 1.
+
+```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+Comptez le nombre de personnes accidentées par iris ainsi que le nombre de personnes accidentées mais non blessées. Vous pouvez utiliser les deux méthodes vues dans la partie cours.
 ```
 
 ```{block, opts.label = "clues"}
-Utilisez `sf::st_intersects()` et `sapply()`.
+**Méthode 1** : Utilisez `sf::st_intersects()` et `sapply()`.
+
+**Méthode 2** (approche *tidyverse*) : Utilisez `sf::st_join()` (jointure spatiale), `dplyr::count` et `dplyr::left_join`.
 
 Documentation de la variable `grav` : Gravité de blessure de l'usager, les usagers accidentés sont classés en trois catégories de victimes plus les indemnes :
 
@@ -178,14 +185,26 @@ Documentation de la variable `grav` : Gravité de blessure de l'usager, les usag
 
 ```{r, nm=TRUE, solution = TRUE}
 library(dplyr)
-inter <- st_intersects(x = iris.75, y = accidents.2019.paris)
+# # Méthode 1 : st_intersect
+ inter <- st_intersects(x = iris.75, y = accidents.2019.paris)
 inter_nonbless <- st_intersects(x = iris.75, y = accidents.2019.paris %>% filter(grav==1))
 iris.75$nbacc <- sapply(inter, length)
 iris.75$nbaccnb <- sapply(X = inter_nonbless, FUN = length)
 head(iris.75)
+
+# # Méthode 2 : jointure et agrégation spatiale
+# accidents.2019.paris.iris <- iris.75 %>% st_join(st_as_sf(accidents.2019.paris))
+# iris.75 <- iris.75 %>%
+#   # sans le st_drop_geometry, le traitement est beaucoup plus long
+#   left_join(accidents.2019.paris.iris %>% st_drop_geometry() %>%
+#               count(CODE_IRIS) %>% setNames(c("CODE_IRIS","nbacc"))) %>%
+#   left_join(accidents.2019.paris.iris %>% st_drop_geometry() %>% filter(grav==1) %>%
+#               count(CODE_IRIS) %>% setNames(c("CODE_IRIS","nbaccnb"))) %>%
+#   mutate(nbaccnb = ifelse(is.na(nbaccnb),0,nbaccnb))
+
 ```
 
-```{block, box.title = "6", box.body = list(fill = "white"), box.icon = "fa-star"}
+```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
 Utilisez la couche ‘iris.75’, pour créer une nouvelle couche cartographique agrégée appelée ‘com.75’ qui correspond aux ‘arrondissements’ de Paris. Gardez aussi dans cette nouvelle couche l'information sur le nombre de personnes accidentées et le nombre de personnes accidentées non blessées dans chaque arrondissement.
 ```
 
@@ -220,9 +239,75 @@ plot(st_geometry(iris.75), col = "ivory3", border = "ivory1")
 plot(st_geometry(com.75), col = NA, border = "ivory4", lwd = 2, add = TRUE)
 ```
 
+```{block, box.title = "3", box.body = list(fill = "white"), box.icon = "fa-star"}
+Géocodez à partir des variables `voie` (et éventuellement `com`) les personnes ayant eu un accident dans le 2ème arrondissement de Paris et en étant sorties indemnes.
+```
 
 
-# Exercice 2 : Cartes interactives
+```{block, opts.label = "clues"}
+Utilisez les deux méthodes de géocodage :
+
+1. `library(banR)` pour interroger l'API de la BAN française
+2. `library(tidygeocoder)` pour les adresses internationales
+```
+
+
+
+```{r, nm=TRUE, eval=FALSE, solution = TRUE}
+# Jointure spatiale
+accidents.2019.paris.iris <- iris.75 %>% st_join(st_as_sf(accidents.2019.paris))
+
+# Avec banR
+# remotes::install_github("joelgombin/banR")
+library(banR)
+geo_banR <- accidents.2019.paris.iris %>% 
+  filter(grav == 1 & INSEE_COM == "75102") %>% 
+  geocode_tbl(adresse = voie,code_insee = com) %>%
+  select(latitude,longitude) %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326, agr = "constant") %>%
+  st_transform(2154)
+
+# Avec tidygeocoder
+# install.packages("tidygeocoder")
+library(tidygeocoder)
+geo_tidygeocoder <- accidents.2019.paris.iris %>% 
+  filter(grav == 1 & INSEE_COM == "75102") %>%
+  mutate(addr = paste(voie, ", Paris, France")) %>%  
+  geocode(addr,method = "osm") %>% select(lat, long) %>%
+  st_as_sf(coords = c("long", "lat"),crs = 4326, agr = "constant") %>%
+  st_transform(2154)
+```
+
+```{r, nm=TRUE, echo=FALSE, cache = TRUE}
+# Jointure spatiale
+accidents.2019.paris.iris <- iris.75 %>% st_join(st_as_sf(accidents.2019.paris))
+
+# Avec banR
+# remotes::install_github("joelgombin/banR")
+library(banR)
+geo_banR <- accidents.2019.paris.iris %>% 
+  filter(grav == 1 & INSEE_COM == "75102") %>% 
+  geocode_tbl(adresse = voie,code_insee = com) %>%
+  select(latitude,longitude) %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326, agr = "constant") %>%
+  st_transform(2154)
+
+# Avec tidygeocoder
+# install.packages("tidygeocoder")
+library(tidygeocoder)
+geo_tidygeocoder <- accidents.2019.paris.iris %>% 
+  filter(grav == 1 & INSEE_COM == "75102") %>%
+  mutate(addr = paste(voie, ", Paris, France")) %>%  
+  geocode(addr,method = "osm") %>% select(lat, long) %>%
+  st_as_sf(coords = c("long", "lat"),crs = 4326, agr = "constant") %>%
+  st_transform(2154)
+```
+
+
+
+# Exercice 3 : Cartes interactives
 
 Dans cet exercice, nous allons utiliser `mapview` pour explorer les accidents de la route ayant eu lieu à Paris en 2019.
 
@@ -391,12 +476,116 @@ mapview(st_as_sf(gr)  %>% st_transform(4326),
 ```
 
 
-# Exercice 3 : Cartes statiques
+# Exercice 4 : `ggplot2` (graphique et carte)
 
-Nous aimerions créer avec le package `ggplot2` une carte des arrondissements de Paris qui combine le nombre de personnes accidentées et la part de celles qui n'ont pas été blessées. 
+Nous aimerions créer avec le package `ggplot2` une carte des arrondissements de Paris qui combine le nombre de personnes accidentées et la part de celles qui n'ont pas été blessées.
+
+Avant de passer aux cartes, nous allons nous entraîner à faire des graphiques avec ce même package `ggplot2`. 
+
+## Graphique
 
 ```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
-Préparation des données : 
+En utilisant le package `ggplot2`, essayez de reproduire le graphique suivant. 
+```
+
+```{r, echo=FALSE, fig.width=10}
+# 1. Ne garder que les véhicules +100 personnes accidentées
+vehic_plus100_accidents <- accidents.2019.paris %>% st_drop_geometry %>% 
+  count(catv) %>% filter(n>100) %>% pull(catv)
+
+# 2. Créer bases de données avec pourcentages
+gg <- accidents.2019.paris %>%
+  st_drop_geometry() %>% 
+  filter(catv %in% vehic_plus100_accidents) %>% 
+  mutate(catv_f = factor(catv)) %>% 
+  mutate(grav_f = factor(grav, #3. facteur bien ordonné grav_f
+                         levels = c(2,3,4,1),
+                         labels = c("Tué", "Blessé hospitalisé", 
+                                    "Blessé léger","Indemne")
+                         )) %>% 
+  count(catv_f,grav_f) %>%  
+  group_by(catv_f) %>% 
+  mutate(prop = 100*n/sum(n))  
+
+#  facteur bien ordonné catv_f
+ordre_catv_f <- gg %>% 
+  filter(grav_f=="Indemne") %>% 
+  arrange(prop) %>% 
+  select(catv_f) %>% 
+  pull()
+
+# 4. Graphique
+library(ggplot2)
+ggplot(data = gg,aes(x = prop, y= factor(catv_f,levels=ordre_catv_f),fill = grav_f, group=grav_f))+
+  geom_bar(stat="identity") + 
+   geom_text(aes(label = round(prop)),
+             position = position_stack(vjust = 0.5)) +
+  scale_fill_manual("Gravité (%)",
+                    values =  c("darkred","red","orange","darkgreen"))+
+  theme_bw()+
+  labs(title = "Répartition de la gravité des accidents par type de véhicule",
+       subtitle = "à Paris en 2019",
+       caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021",
+       x = "", y = "Type de véhicule")
+
+```
+
+
+```{block, opts.label = "clues"}
+Utilisez la fonction `ggplot2::geom_barplot()` pour faire un diagramme en barres. Et mettez en place la grammaire des graphiques dans ce cas précis.
+
+1. Ne garder que les véhicules `catv` pour lesquels il y plus de 100 personnes accidentées ;
+2. Créez une base de données avec une colonne `prop` qui correspond à la répartition en pourcentages de la gravité `grav` de l'accident (Tué, Blessé hospitalisé, Blessé léger et Indemne) pour chaque type de véhicule `catv` impliqué sélectionné dans le 1. 
+3. Veillez à transformer les deux variables en `factor` pour bien les ordonner
+  * `grav` dans l'ordre suivant : `c("Tué", "Blessé hospitalisé","Blessé léger","Indemne")`
+  * `catv` dans l'ordre du graphique qui correspond à l'ordre croissant de la part de personnes indemnes par catégorie de véhicule
+4. Réalisez le graphique (`geom_barplot`, `scale_fill_manual`, `theme_bw`, `geom_text`, `labs`)
+```
+
+```{r, eval=FALSE, solution=TRUE}
+# 1. Ne garder que les véhicules +100 personnes accidentées
+vehic_plus100_accidents <- accidents.2019.paris %>% st_drop_geometry %>% 
+  count(catv) %>% filter(n>100) %>% pull(catv)
+
+# 2. Créer bases de données avec pourcentages
+gg <- accidents.2019.paris %>%
+  st_drop_geometry() %>% 
+  filter(catv %in% vehic_plus100_accidents) %>% 
+  mutate(catv_f = factor(catv)) %>% 
+  mutate(grav_f = factor(grav, #3. facteur bien ordonné grav_f
+                         levels = c(2,3,4,1),
+                         labels = c("Tué", "Blessé hospitalisé", 
+                                    "Blessé léger","Indemne")
+                         )) %>% 
+  count(catv_f,grav_f) %>%  
+  group_by(catv_f) %>% 
+  mutate(prop = 100*n/sum(n))  
+
+#  facteur bien ordonné catv_f
+ordre_catv_f <- gg %>% 
+  filter(grav_f=="Indemne") %>% 
+  arrange(prop) %>% 
+  select(catv_f) %>% 
+  pull()
+
+# 4. Graphique
+library(ggplot2)
+ggplot(data = gg)+
+  geom_bar(aes(x = prop, y= factor(catv_f,levels=ordre_catv_f),fill = grav_f), stat="identity") + 
+  scale_fill_manual("Gravité (%)",
+                    values =  c("darkred","red","orange","darkgreen"))+
+  theme_bw()+
+  labs(title = "Répartition de la gravité des accidents par type de véhicule",
+       subtitle = "à Paris en 2019",
+       caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021",
+       x = "", y = "Type de véhicule")
+
+```
+
+## Carte
+
+```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
+Préparation des données pour la carte : 
 
 * Chargez le fond de carte 'com75_shp' (qui contient le nombre de personnes accidentées, en tout et non blessées, dans chaque arrondissement) et créez une variable appelée *part_non_blesses* qui correspond à la part des personnes non blessées parmi les accidentés dans chaque arrondissement.  
 * Créez un vecteur des quartiles de la variable *part_non_blesses*.   
@@ -435,8 +624,8 @@ com.75 <- com.75 %>%
 ```
 
 
-```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
-En utilisant la package `ggplot2`, créez une carte qui contient en choroplèthe la variable `part_non_blesses` et en cercles proportionnels la variable `nbacc`. 
+```{block, box.title = "3", box.body = list(fill = "white"), box.icon = "fa-star"}
+En utilisant le package `ggplot2`, créez une carte qui contient en choroplèthe la variable `part_non_blesses` et en cercles proportionnels la variable `nbacc`. 
 ```
 
 ```{r, eval=FALSE, solution=TRUE}
@@ -491,7 +680,7 @@ map_ggplot <- ggplot() +
 plot(map_ggplot)
 ```
 
-# Exercice 4 : Données Airbnb
+# Exercice 5 : Données Airbnb
 
 Ce dernier exercice s'appuie sur les données des listings Airbnb à Paris. 
 
@@ -741,7 +930,7 @@ ggplot(gg) +
        x = "Prix d'une nuitée (€)",y = "")
 ```
 
-```{block, box.title = "7", box.body = list(fill = "white"), box.icon = "fa-star"}
+```{block, box.title = "6", box.body = list(fill = "white"), box.icon = "fa-star"}
 Essayez de reproduire cette carte :
 ```
 
