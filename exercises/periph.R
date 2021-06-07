@@ -1,7 +1,7 @@
 library(sfnetworks)
 library(dplyr)
 library(sf)
-library(tidygraph)
+library(tidygraph) #equivalent dplyr pour les graphs
 library(ggplot2)
 
 # A partir de roads, on garde les routes qui correspondent au périphérique
@@ -20,14 +20,13 @@ plot(net)
 nets = convert(net,to_spatial_smooth)
 plot(nets)
 
-# activate ? on calcule la longueur des edges, on trie par ordre décroissant
-# lid ?
+# On calcule la longueur des edges, on trie par ordre décroissant
 nets = nets %>% 
-  activate(edges) %>% 
+  activate(edges) %>% #on travaille sur les liens (et non les noeuds)
   mutate(length=st_length(x)) %>% 
   arrange(desc(length)) %>% 
   mutate(lid=1:n()) %>% 
-  filter(lid %in% c(1,2,3,5))
+  filter(lid %in% c(1,2,3,5)) #je ne garde que les grands accès
 #plot(nets) 
 
 #On transforme le tout en lignes
@@ -35,12 +34,12 @@ lines.geom = nets %>% activate(edges) %>% st_geometry()
 lines = st_sf(lines.geom,id=1:length(lines.geom))
 plot(lines)
 
-# On découpe en portions de 100m (lignes et points)
+# On prend une ligne et on met un point tous les 100 mètres
 points_eqd = lines  %>% st_line_sample(density = 1/100)
 lines_eqd = lines  %>% st_line_sample(density = 1/100) %>% st_cast("LINESTRING")
 plot(points_eqd)
 
-# ?
+# Je découpe ma ligne avec mes points
 geo_col = lwgeom::st_split(lines_eqd,points_eqd)
 lines_final.geom = st_collection_extract(geo_col,type = "LINESTRING")
 lines_final = st_sf(lines_final.geom,id=1:length(lines_final.geom))
@@ -68,3 +67,4 @@ ggplot(periph_count) +
        subtitle = "en 2019, par portion de 100m",
        caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021",x="",y="")
 
+# Ajout de st_centroid pour les 100m qui dépassent

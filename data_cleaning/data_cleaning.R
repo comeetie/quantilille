@@ -6,7 +6,7 @@ library(readr)
 #1. La rubrique CARACTERISTIQUES qui décrit les circonstances générales 
 #de l’accident
 # première lecture
-caracteristiques.2019 <- read.csv2("../data/caracteristiques-2019.csv")
+caracteristiques.2019 <- read.csv2("data/caracteristiques-2019.csv")
 # correction des type de colones
 cara_ctype = cols(
   Num_Acc = col_double(),
@@ -26,7 +26,7 @@ cara_ctype = cols(
   long = col_character())
 
 
-caracteristiques.2019 = read_delim("../data/caracteristiques-2019.csv",delim=";",col_types = cara_ctype)
+caracteristiques.2019 = read_delim("data/caracteristiques-2019.csv",delim=";",col_types = cara_ctype)
 levels(caracteristiques.2019$lum)=c("Non renseigné","Plein jour","Crépuscule ou aube","Nuit sans éclairage public","Nuit avec éclairage public non allumé","Nuit avec éclairage public allumé")
 levels(caracteristiques.2019$int)=c("Non renseigné","Hors intersection","Intersection en X","Intersection en T","Intersection en Y", "Intersection à plus de 4 branches","Giratoire","Place", "Passage à niveau", "Autre intersection")
 caracteristiques.2019 = caracteristiques.2019 %>% mutate(lat=as.numeric(gsub(",",".",lat)),long=as.numeric(gsub(",",".",long)))
@@ -35,11 +35,11 @@ caracteristiques.2019 = caracteristiques.2019 %>% mutate(lat=as.numeric(gsub(","
 #2. La rubrique LIEUX qui décrit le lieu principal de l’accident
 #même si celui-ci s’est déroulé à une intersection
 
-lieux.2019 <- read_delim("../data/lieux-2019.csv", delim=";")
+lieux.2019 <- read_delim("data/lieux-2019.csv", delim=";")
 
 ctype_lieux = cols(
   Num_Acc = col_double(),
-  catr = col_factor(1:9),
+  catr = col_factor(as.character(c(1:7,9))),
   voie = col_character(),
   v1 = col_double(),
   v2 = col_character(),
@@ -49,7 +49,7 @@ ctype_lieux = cols(
   prof = col_character(),
   pr = col_character(),
   pr1 = col_character(),
-  plan = col_factor(),
+  plan = col_character(),
   lartpc = col_double(),
   larrout = col_double(),
   surf = col_character(),
@@ -57,9 +57,10 @@ ctype_lieux = cols(
   situ = col_character(),
   vma = col_character()
 )
+# A corriger
 lieux.2019 <- read_delim("data/lieux-2019.csv", delim=";", col_types = ctype_lieux)
 levels(lieux.2019$catr)=c("Autoroute","Route nationale","Route Départementale","Voie Communales","Hors réseau public", "Parc de stationnement ouvert à la circulation publique","Routes de métropole urbaine","Autre") 
-
+unique(lieux.2019$catr)
 #3. La rubrique VEHICULES impliqués
 vehicules.2019 <- read_delim("../data/vehicules-2019.csv", delim=";")
 
@@ -76,7 +77,7 @@ ctype_vehi = cols(
   motor = col_character(),
   occutc = col_double()
 )
-vehicules.2019 <- read_delim("../data/vehicules-2019.csv", delim=";",col_types = ctype_vehi)
+vehicules.2019 <- read_delim("data/vehicules-2019.csv", delim=";",col_types = ctype_vehi)
 
 levels_vehicules = c("Indéterminable",
 "Bicyclette",
