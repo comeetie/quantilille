@@ -99,7 +99,7 @@ Utilisez la fonction `sf::st_read()`.
 
 ```{r, solution = TRUE}
 library(sf)
-iris.75 <- st_read("../data/iris_paris.shp", quiet = TRUE,
+iris.75 <- st_read("data/iris_75.shp", quiet = TRUE,
                    stringsAsFactors = F)
 ```
 
@@ -159,6 +159,71 @@ plot(st_geometry(iris.75), bg = "cornsilk", col = "lightblue",
 plot(st_geometry(accidents.2019.paris), col = "red", pch = 20, cex = .2, add=TRUE)
 title("Accidents à Paris")
 ```
+
+```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
+Effectuez ces quelques traitement géomatiques : 
+
+1. Faire une carte agrégée des iris de Paris (union simple)
+2. Faire une zone tampon autour de 1km
+3. Calculer les polygones de Voronoïs autour des accidents
+4. Extraire les 50 premiers centroïdes de ces Voronoïs
+5. Calculer la distance entre ces centroïdes
+```
+
+```{block, opts.label = "clues"}
+Utilisez les fonctions `st_union`, `st_buffer`, `st_voronoi`, `st_collection_extract`, `st_interection`, `st_join` et `st_centroid`.
+```
+
+```{r, sm=TRUE, eval=FALSE, solution = TRUE}
+# 1. Carte agrégée Paris
+iris.75.u <- st_union(iris.75)
+# 2. Zone tampon de 1km
+iris.75.b <- st_buffer(x = iris.75.u, dist = 1000)
+plot(st_geometry(iris.75.b), lwd=2, border = "red")
+# 3. Calculer les polygones de Voronoïs autour des accidents
+accidents.2019.paris.v <- st_collection_extract(
+  st_voronoi(x = st_union(accidents.2019.paris)))
+accidents.2019.paris.v <- st_intersection(accidents.2019.paris.v, st_union(iris.75))
+accidents.2019.paris.v <- st_join(x = st_sf(accidents.2019.paris.v),
+                                  y = accidents.2019.paris)
+plot(st_geometry(accidents.2019.paris.v), col='lightblue', add=TRUE)
+# 4. Extraire les 50 premiers centroïdes des Voronoïs
+accidents.2019.paris.v.c <- st_centroid(accidents.2019.paris.v)[1:50,]
+plot(st_geometry(accidents.2019.paris.v.c), add=TRUE, cex=1,
+     col="red", pch=20)
+plot(st_geometry(iris.75.u), border="blue", ltw=5, col=NA,
+     add = TRUE)
+
+# 5. distance entre centroïdes
+mat <- st_distance(x=accidents.2019.paris.v.c,
+                   y=accidents.2019.paris.v.c)
+```
+
+```{r, sm=TRUE, echo=FALSE}
+# 1. Carte agrégée Paris
+iris.75.u <- st_union(iris.75)
+# 2. Zone tampon de 1km
+iris.75.b <- st_buffer(x = iris.75.u, dist = 1000)
+plot(st_geometry(iris.75.b), lwd=2, border = "red")
+# 3. Calculer les polygones de Voronoïs autour des accidents
+accidents.2019.paris.v <- st_collection_extract(
+  st_voronoi(x = st_union(accidents.2019.paris)))
+accidents.2019.paris.v <- st_intersection(accidents.2019.paris.v, st_union(iris.75))
+accidents.2019.paris.v <- st_join(x = st_sf(accidents.2019.paris.v),
+                                  y = accidents.2019.paris)
+plot(st_geometry(accidents.2019.paris.v), col='lightblue', add=TRUE)
+# 4. Extraire les 50 premiers centroïdes des Voronoïs
+accidents.2019.paris.v.c <- st_centroid(accidents.2019.paris.v)[1:50,]
+plot(st_geometry(accidents.2019.paris.v.c), add=TRUE, cex=1,
+     col="red", pch=20)
+plot(st_geometry(iris.75.u), border="blue", ltw=5, col=NA,
+     add = TRUE)
+
+# 5. distance entre centroïdes
+mat <- st_distance(x=accidents.2019.paris.v.c,
+                   y=accidents.2019.paris.v.c)
+```
+
 
 # Exercice 2 : Intersections, Agrégations
 
@@ -314,11 +379,11 @@ Dans cet exercice, nous allons utiliser `mapview` pour explorer les accidents de
 En complément, nous allons utiliser les données d'OSM permettant de croiser le lieu des accidents avec les routes empruntées. 
 
 ```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
-Chargez la base de données ‘accidents.2019.paris’ et affichez les positions des 11 897 personnes victimes d'un accident à Paris en 2019 grâce au package `mapview`. Essayez d'utiliser différents paramètres pour customiser votre carte.
+Chargez la base de données ‘accidents.2019.paris’ et affichez les positions des 11 897 personnes victimes d'un accident à Paris en 2019 grâce au package `mapview`. Essayez d'utiliser différents paramètres pour customiser votre carte. Coloriez notamment les points selon la gravité des accidents. 
 ```
 
 ```{block, opts.label = "information"}
-Par exemple, vous pouvez utiliser les paramètres `map.types`, `col.regions`, `label`, `color`, `legend`, `layer.name`, `homebutton`, `lwd` ... du package `mapview`.
+Par exemple, vous pouvez utiliser les paramètres `map.types`, `col.regions`, `label`, `color`, `legend`, `layer.name`, `homebutton`, `lwd`, `alpha`, `zcol` ... du package `mapview`.
 ```
 
 ```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
@@ -327,22 +392,40 @@ library(sf)
 
 accidents.2019.paris <- st_read("data/accidents2019_paris.geojson", 
                                 quiet = TRUE)
-mapview(accidents.2019.paris, map.types = "OpenStreetMap",
-        col.regions = "#940000",
-        label = accidents.2019.paris$Num_Acc,
-        color = "white", legend = TRUE, layer.name = "Accidents à Paris en 2019",
+mapview(accidents.2019.paris %>%
+          mutate(grav_f = factor(grav,
+                         levels = c(2,3,4,1),
+                         labels = c("Tué", "Blessé hospitalisé", 
+                                    "Blessé léger","Indemne")
+                         )),
+        col.regions = c("darkred","red","orange","darkgreen"),
+        label = accidents.2019.paris$Num_Acc, #label
+        color = "white", legend = TRUE,
+        zcol="grav_f", alpha=0.9,
+        map.types = "Stamen.TonerLite",
+        layer.name = "Gravité des accidents\nà Paris en 2019",
         homebutton = FALSE, lwd = 0.2)
+
 ```
 
 ```{r, nm=TRUE, eval=TRUE, echo=FALSE}
 library(mapview)
 library(sf)
-accidents.2019.paris <- st_read("data/accidents2019_paris.geojson",
+
+accidents.2019.paris <- st_read("data/accidents2019_paris.geojson", 
                                 quiet = TRUE)
-mapview(accidents.2019.paris, map.types = "OpenStreetMap",
-        col.regions = "#940000",
-        label = accidents.2019.paris$Num_Acc,
-        color = "white", legend = TRUE, layer.name = "Accidents à Paris en 2019",
+mapview(accidents.2019.paris %>%
+          mutate(grav_f = factor(grav,
+                         levels = c(2,3,4,1),
+                         labels = c("Tué", "Blessé hospitalisé", 
+                                    "Blessé léger","Indemne")
+                         )),
+        col.regions = c("darkred","red","orange","darkgreen"),
+        label = accidents.2019.paris$Num_Acc, #label
+        color = "white", legend = TRUE,
+        zcol="grav_f", alpha=0.9,
+        map.types = "Stamen.TonerLite",
+        layer.name = "Gravité des accidents\nà Paris en 2019",
         homebutton = FALSE, lwd = 0.2)
 ```
 
@@ -854,19 +937,20 @@ Essayez de reproduire cette figure :
 ```
 
 ```{r, echo=FALSE}
-sel_metro <-  c('Saint-Lazare','École Militaire',
-                'Saint-Germain-des-Prés','Rennes',
-                'Denfert-Rochereau','Colonel Fabien',
-                'Saint-Placide','Oberkampf',"Place d'Italie",
-                'La Tour Maubourg','Les Halles',
-                'Filles du Calvaire','Mairie des Lilas',
-                'Porte de la Villette',"Porte d'Italie",
-                'Montparnasse-Bienvenüe','Balard','Château Rouge',
-                "Gare d'Austerlitz","Gare de l'Est",
-                'Palais Royal - Musée du Louvre',
-                'Boulogne - Pont de Saint-Cloud','Richard Lenoir',
-                'Strasbourg - Saint-Denis','Gare de Lyon',
-                'Poissonnière','Tolbiac','Gare du Nord (Métro)')
+sel_metro <- c('Filles du Calvaire',
+               'Colonel Fabien','Saint-Placide','Rennes',
+               'Les Halles','Tolbiac','Denfert-Rochereau',
+               'Oberkampf','Montparnasse-Bienvenüe',
+               'La Tour Maubourg','Mairie des Lilas',
+               'École Militaire','Saint-Germain-des-Prés',
+               'Boulogne - Pont de Saint-Cloud',"Gare de l'Est",
+               "Place d'Italie",'Richard Lenoir','Saint-Lazare',
+               'Porte de la Villette','Palais Royal - Musée du Louvre',
+               'Château Rouge','Gare du Nord (Métro)',
+               'Strasbourg - Saint-Denis','Poissonnière',
+               'Balard','Gare de Lyon',"Porte d'Italie",
+               "Gare d'Austerlitz")
+
 
 gg <- subway.poly %>% st_join(listings.l93) %>% 
   st_drop_geometry() %>% 

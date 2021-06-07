@@ -114,7 +114,7 @@ levels(vehicules.2019$catv)=levels_vehicules
 
 
 #4. La rubrique USAGERS impliqués
-usagers.2019 <- read_delim("../data/usagers-2019.csv",
+usagers.2019 <- read_delim("data/usagers-2019.csv",
                          delim=";")
 
 ctype_usagers = cols(
@@ -134,7 +134,7 @@ ctype_usagers = cols(
   actp = col_character(),
   etatp = col_character()
 )
-usagers.2019 <- read_delim("../data/usagers-2019.csv",
+usagers.2019 <- read_delim("data/usagers-2019.csv",
                            delim=";",col_types = ctype_usagers)
 levels(usagers.2019$sexe)=c("Masculin","Féminin")
 
@@ -157,7 +157,7 @@ accidents.2019 <-
   )
 
 accidents.2019.paris <- accidents.2019 %>% filter(substr(com,1,2)==75)
-saveRDS(accidents.2019.paris,"../data/accidents2019_paris.RDS")
+#saveRDS(accidents.2019.paris,"lecture/data/accidents2019_paris.RDS")
 
 # Transformation en objet sf
 library(sf)
@@ -165,12 +165,12 @@ accidents.2019.paris <- st_as_sf(accidents.2019.paris,
                                  coords = c("long", "lat"),
                                  crs = 4226, agr = "constant") %>% 
   st_transform(2154)
-st_write(accidents.2019.paris,"../data/accidents2019_paris.geojson",delete_dsn = TRUE)
+#st_write(accidents.2019.paris,"exercises/data/accidents2019_paris.geojson",delete_dsn = TRUE)
 
 ######## Extraction du fond de carte des iris (IGN)
 #https://geoservices.ign.fr/documentation/diffusion/telechargement-donnees-libres.html#contoursiris
 #donnees 2019
 iris.fra <- st_read("data/shp_iris/CONTOURS-IRIS.shp", stringsAsFactors = F) 
 iris.75 <- iris.fra[substr(iris.fra$INSEE_COM, 1,2)=="75",c("CODE_IRIS","INSEE_COM")]
-#saveRDS(iris.75,"data/iris_75.RDS")
-#st_write(iris.75,"data/iris_75.shp")
+#st_write(iris.75,"lecture/data/iris_75.shp")
+#st_write(iris.75,"exercises/data/iris_75.shp")

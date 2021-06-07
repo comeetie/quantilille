@@ -49,6 +49,8 @@ write_sf(mtq,"data/mtq/martinique.gpkg",delete_layer = TRUE)
 st_write(mtq,"data/mtq/martinique.gpkg",delete_layer = TRUE)
 ```
 
+Le format gpkg (geopackage) est ouvert (non lié à un système d’exploitation) et implémenté sous la forme d’une base de données SQLite.
+
 ## Système de coordonnées
 Les projections/système de coordonées sont répertoriées grâce à un code appelé code epsg :
 
@@ -84,7 +86,7 @@ plot(st_geometry(mtq))
 ## Extraire les centroïdes
 
 ```{r, nm=TRUE}
-mtq_c <- st_centroid(mtq)
+mtq_c <- st_centroid(mtq) 
 plot(st_geometry(mtq))
 plot(st_geometry(mtq_c), add=TRUE, cex=1.2, col="red", pch=20)
 ```
@@ -249,7 +251,7 @@ Dans ce premier exemple, les données sont stockées dans un fichier shapefile.
 library(sf)
 library(dplyr)
 # Import de la couche géographique (iris de Paris)
-iris.75 <- st_read("../data/iris_paris.shp", stringsAsFactors = F) 
+iris.75 <- st_read("data/iris_75.shp", stringsAsFactors = F) 
 ```
 
 Regardons la projection utilisée : 
@@ -262,7 +264,7 @@ Dans ce second exemple, il s'agit de données ponctuelles stockées dans un fich
 
 ```{r, eval=TRUE,cache=FALSE, fig.height=5}
 # Import du dataset  
-accidents.2019.paris <- readRDS("../data/accidents2019_paris.RDS")
+accidents.2019.paris <- readRDS("data/accidents2019_paris.RDS")
 # Transformation en objet sf
 accidents.2019.paris <- st_as_sf(accidents.2019.paris,
                                 coords = c("long", "lat"),
@@ -280,13 +282,13 @@ Tout d'abord, localisons les personnes accidentées selon la gravité des leurs 
 ```{r, eval=TRUE,cache=FALSE, fig.height=5}
 plot(st_geometry(iris.75))
 # Les personnes non blessées ou blessées légèrement
-plot(accidents.2019.paris %>% filter(grav%in%c(1,4)) ,
+plot(accidents.2019.paris %>% filter(grav%in%c(1,4)) %>% st_geometry,
      pch = 20, col = "darkgreen", add=TRUE, cex = 0.5)
 # Les personnes blessées gravement
-plot(accidents.2019.paris %>% filter(grav%in%c(3)) ,
+plot(accidents.2019.paris %>% filter(grav == 3) %>% st_geometry,
      pch = 20, col = "orange", add=TRUE, cex = 0.5)
 # Les personnes tuées
-plot(accidents.2019.paris %>% filter(grav==2),
+plot(accidents.2019.paris %>% filter(grav == 2) %>% st_geometry,
      pch = 20, col = "red", add=TRUE, cex = 1)
 ```
 
@@ -375,9 +377,11 @@ plot(accidents.2019.paris %>% filter(grav == 2) , pch = 20,
 
 Géocoder c'est **passer d'une adresse** à une **position géographique**. En France, la [Base Adresse Nationale (BAN)](https://adresse.data.gouv.fr/) permet de faire ce travail efficacement.
 
-En R, le package `banR` permet d'interroger l'API de la BAN. Ce package, non présent sur le CRAN, doit être installé via github. Il permet ensuite de géocoder une colonne d'adresses en batch en spécifiant la colonne contenant les adresses voire éventuellement une colonne contenant un code Insee pour faciliter et préciser la requête.
+En R, le package `banR` permet d'interroger l'API de la BAN. Ce package, non présent sur le CRAN, doit être installé via github. Il permet ensuite de géocoder une colonne d'adresses en batch, c’est-à-dire en un nombre minimal de requêtes pour éviter de saturer l’API. Il suffit de spécifier la colonne contenant les adresses, voire éventuellement une colonne contenant le code Insee de la commune du lieu, pour faciliter et préciser la requête.
 
 Pour des adresses internationales, il est possible d'utiliser `tidygeocoder` qui peut interroger différentes API (gratuites ou payantes). Ce package fonctionne de manière assez similaire au précédent.
+
+L’API de `banR` est plus rapide que celle de `tidygeocoder`. 
 
 ```{r p1, eval=TRUE,cache=TRUE, fig.height=4.75}
 # Avec les coordonnées présentes dans la base de données
@@ -417,7 +421,7 @@ st_distance(geo_banR, geo_tidygeocoder, by_element = TRUE)
 mean(st_distance(geo_banR, geo_tidygeocoder, by_element = TRUE))
 ```
 
-# Faire des cartes interactives avec R  
+# Faire des cartes interactives  
 
 Plusieurs solutions existent pour faire des cartes interactives avec R. `mapview`, `leaflet` et `mapdeck` sont les principales. Par simplicité, nous nous concentrons ici sur `mapview`.
 
@@ -430,8 +434,10 @@ mapviewOptions(fgb = FALSE)
 # construire une carte avec certaines options pour les cercles
 # avec mapview la taille des cercles reste constante quel que soit le zoom. 
 # grav = 2 : individus tués
-mapview(accidents.2019.paris %>%
-          filter(grav == 2))
+individus_tues <- accidents.2019.paris %>%
+  filter(grav == 2) %>%
+  mutate(age=2019-an_nais) # On ajoute leur âge
+mapview(individus_tues)
 ```
 
 
@@ -441,26 +447,27 @@ On customise un peu...
 
 
 ```{r, cache=FALSE}
-mapview(accidents.2019.paris %>%
-          filter(grav == 2),
-        map.types = "Stamen.TonerLite", legend = FALSE,
-        cex = 5, col.regions = "#217844", lwd = 0, alpha = 0.9)
+mapview(individus_tues,
+        map.types = "Stamen.TonerLite", legend = TRUE,
+        cex = 5, col.regions = "#217844", lwd = 0, alpha = 0.9,
+        layer.name = 'Individus tués')
 ```
 
 
 
 On customise encore un peu plus...
 
+Ajouter une légende pour la taille des ronds proportionnels ne peut pas être fait facilement. 
 
+Quand on clique sur un point, la valeur des différentes variables de la base de données apparaissent. Cela peut aider à l'exploration de la base de données.
 
 ```{r, cache=FALSE}
-mapview(accidents.2019.paris %>%
-          filter(grav==2) %>%
-          mutate(age=2019-an_nais),
-        map.types = "Stamen.TonerLite", legend=FALSE,
-        cex="age", zcol="sexe", lwd=0, alpha=0.9)
+mapview(individus_tues,
+        map.types = "Stamen.TonerLite", legend=TRUE,
+        layer.name = 'Individus tués',
+        cex="age", zcol="sexe", lwd=0, alpha=0.9
+       )
 ```
-
 
 # Faire des cartes statiques 
 
@@ -687,7 +694,9 @@ ggplot() +
 ```
 
 
+# Un exemple de traitement géomatique
 
+<!-- Recopier periph.R TODO Etienne -->
 
 
 
