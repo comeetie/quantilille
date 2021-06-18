@@ -75,10 +75,10 @@ La base de données utilisée dans ce TP concerne la **géolocalisation des acci
 *Un certain nombre d’indicateurs issus de cette base font l’objet d’une [labellisation par l’autorité de la statistique publique](https://www.onisr.securite-routiere.gouv.fr/outils-statistiques/indicateurs-labellises) (arrêté du 27 novembre 2019). »*
 
 </br>
-Vous pouvez télécharger les bases de données brutes  [ici](https://github.com/comeetie/satRday/blob/master/exercises/data.zip?raw=true) ou utiliser R pour les télécharger dans votre dossier actuel :
+Vous pouvez télécharger les bases de données brutes  [ici](https://github.com/comeetie/quantilille/raw/main/exercises/data.zip) ou utiliser R pour les télécharger dans votre dossier actuel :
 ```{r, eval=FALSE}
 # télécharger le dataset
-download.file("https://github.com/comeetie/quantilille/blob/master/exercises/data.zip?raw=true", 
+download.file("https://github.com/comeetie/quantilille/raw/main/exercises/data.zip", 
               destfile = "data.zip")
 # dézipper
 unzip("data.zip",exdir=".") 
