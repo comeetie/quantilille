@@ -134,7 +134,7 @@ plot(st_geometry(iris.75))
 ```
 
 ```{block, box.title = "4", box.body = list(fill = "white"), box.icon = "fa-star"}
-Importez la couche des accidents de la route appelée 'accidents_75.shp' et affichez la carte des accidents dans Paris en utilisant simplement la fonction `plot`. 
+Importez la couche des accidents de la route appelée 'accidents_75.geojson' et affichez la carte des accidents dans Paris en utilisant simplement la fonction `plot`. 
 ```
 
 ```{block, opts.label = "clues"}
@@ -163,11 +163,13 @@ title("Accidents à Paris")
 ```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
 Effectuez ces quelques traitement géomatiques : 
 
-1. Faire une carte agrégée des iris de Paris (union simple)
-2. Faire une zone tampon autour de 1km
-3. Calculer les polygones de Voronoïs autour des accidents
-4. Extraire les 50 premiers centroïdes de ces Voronoïs
-5. Calculer la distance entre ces centroïdes
+1. Créez un polygone avec le contour de paris en agrégeant les iris de Paris (union simple)
+2. Faire une zone tampon autour de celui-ci de 1km
+3. Extraire les centroïdes des iris
+4. Calculez les distances entre les centroïdes des iis
+5. Calculez les polygones de Voronoïs autour des centroïdes des iris
+6. Affichez les différentes couches créées 
+
 ```
 
 ```{block, opts.label = "clues"}
@@ -179,24 +181,21 @@ Utilisez les fonctions `st_union`, `st_buffer`, `st_voronoi`, `st_collection_ext
 iris.75.u <- st_union(iris.75)
 # 2. Zone tampon de 1km
 iris.75.b <- st_buffer(x = iris.75.u, dist = 1000)
-plot(st_geometry(iris.75.b), lwd=2, border = "red")
-# 3. Calculer les polygones de Voronoïs autour des accidents
-accidents.2019.paris.v <- st_collection_extract(
-  st_voronoi(x = st_union(accidents.2019.paris)))
-accidents.2019.paris.v <- st_intersection(accidents.2019.paris.v, st_union(iris.75))
-accidents.2019.paris.v <- st_join(x = st_sf(accidents.2019.paris.v),
-                                  y = accidents.2019.paris)
-plot(st_geometry(accidents.2019.paris.v), col='lightblue', add=TRUE)
-# 4. Extraire les 50 premiers centroïdes des Voronoïs
-accidents.2019.paris.v.c <- st_centroid(accidents.2019.paris.v)[1:50,]
-plot(st_geometry(accidents.2019.paris.v.c), add=TRUE, cex=1,
-     col="red", pch=20)
-plot(st_geometry(iris.75.u), border="blue", ltw=5, col=NA,
-     add = TRUE)
+# 3. centroïdes
+iris.75.c <- st_centroid(iris.75)
+# 4. distance entre centroïdes
+mat <- st_distance(x=iris.75.c, y=iris.75.c)
+# 5. Calculer les polygones de Voronoïs autour des centroïdes
+iris.75.v <- st_collection_extract(st_voronoi(x = st_union(iris.75.c)))
+iris.75.v <- st_intersection(iris.75.v,iris.75.u)
 
-# 5. distance entre centroïdes
-mat <- st_distance(x=accidents.2019.paris.v.c,
-                   y=accidents.2019.paris.v.c)
+
+plot(st_geometry(iris.75.b), lwd=2, border ="red",col=NA)
+plot(st_geometry(iris.75),  ltw=5, col="#999999", add = TRUE)
+plot(st_geometry(iris.75.u), border="blue", ltw=5, col=NA, add = TRUE)
+plot(st_geometry(iris.75.c), pch = 20, cex = .2,col="red", add = TRUE)
+plot(st_geometry(iris.75.v),  ltw=5, col=NA,border="blue", add = TRUE)
+
 ```
 
 ```{r, sm=TRUE, echo=FALSE}
@@ -204,24 +203,20 @@ mat <- st_distance(x=accidents.2019.paris.v.c,
 iris.75.u <- st_union(iris.75)
 # 2. Zone tampon de 1km
 iris.75.b <- st_buffer(x = iris.75.u, dist = 1000)
-plot(st_geometry(iris.75.b), lwd=2, border = "red")
-# 3. Calculer les polygones de Voronoïs autour des accidents
-accidents.2019.paris.v <- st_collection_extract(
-  st_voronoi(x = st_union(accidents.2019.paris)))
-accidents.2019.paris.v <- st_intersection(accidents.2019.paris.v, st_union(iris.75))
-accidents.2019.paris.v <- st_join(x = st_sf(accidents.2019.paris.v),
-                                  y = accidents.2019.paris)
-plot(st_geometry(accidents.2019.paris.v), col='lightblue', add=TRUE)
-# 4. Extraire les 50 premiers centroïdes des Voronoïs
-accidents.2019.paris.v.c <- st_centroid(accidents.2019.paris.v)[1:50,]
-plot(st_geometry(accidents.2019.paris.v.c), add=TRUE, cex=1,
-     col="red", pch=20)
-plot(st_geometry(iris.75.u), border="blue", ltw=5, col=NA,
-     add = TRUE)
+# 3. centroïdes
+iris.75.c <- st_centroid(iris.75)
+# 4. distance entre centroïdes
+mat <- st_distance(x=iris.75.c, y=iris.75.c)
+# 5. Calculer les polygones de Voronoïs autour des centroïdes
+iris.75.v <- st_collection_extract(st_voronoi(x = st_union(iris.75.c)))
+iris.75.v <- st_intersection(iris.75.v,iris.75.u)
 
-# 5. distance entre centroïdes
-mat <- st_distance(x=accidents.2019.paris.v.c,
-                   y=accidents.2019.paris.v.c)
+
+plot(st_geometry(iris.75.b), lwd=2, border ="red",col=NA)
+plot(st_geometry(iris.75),  ltw=5, col="#999999", add = TRUE)
+plot(st_geometry(iris.75.u), border="blue", ltw=5, col=NA, add = TRUE)
+plot(st_geometry(iris.75.c), pch = 20, cex = .2,col="red", add = TRUE)
+plot(st_geometry(iris.75.v),  ltw=5, col=NA,border="blue", add = TRUE)
 ```
 
 
@@ -403,7 +398,7 @@ mapview(accidents.2019.paris %>%
         color = "white", legend = TRUE,
         zcol="grav_f", alpha=0.9,
         map.types = "Stamen.TonerLite",
-        layer.name = "Gravité des accidents\nà Paris en 2019",
+        layer.name = "Gravite",
         homebutton = FALSE, lwd = 0.2)
 
 ```
@@ -425,7 +420,7 @@ mapview(accidents.2019.paris %>%
         color = "white", legend = TRUE,
         zcol="grav_f", alpha=0.9,
         map.types = "Stamen.TonerLite",
-        layer.name = "Gravité des accidents\nà Paris en 2019",
+        layer.name = "Gravite",
         homebutton = FALSE, lwd = 0.2)
 ```
 
@@ -490,7 +485,7 @@ library(sf)
 
 mapview(accidents.2019.paris.periph, map.types = "OpenStreetMap",
         col.regions = "#940000",
-        color = "white", legend = TRUE, layer.name = "Accidents sur le périphérique à Paris en 2019",
+        color = "white", legend = TRUE, layer.name = "Accidents",
         homebutton = FALSE, lwd = 0.2)
 ```
 
@@ -500,7 +495,7 @@ library(sf)
 
 mapview(accidents.2019.paris.periph, map.types = "OpenStreetMap",
         col.regions = "#940000",
-        color = "white", legend = TRUE, layer.name = "Accidents sur le périphérique à Paris en 2019",
+        color = "white", legend = TRUE, layer.name = "Accidents",
         homebutton = FALSE, lwd = 0.2)
 ```
 
@@ -536,7 +531,7 @@ mapview(st_as_sf(gr)  %>% st_transform(4326),
         alpha = 0.9,
         at = bks, 
         legend = TRUE,
-        layer.name = "Nombre d'accidents par</br>carreau de 500 mètres",
+        layer.name = "Nombre d'accidents par</br>carreau de 500 metres",
         homebutton = FALSE, lwd = 0.2)
 ```
 
