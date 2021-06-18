@@ -774,12 +774,12 @@ line = st_as_sf(line.geom,id=1)
 plot(line)
 ```
 
-Il reste a découper cette longue ligne en tronçons de 200m pour se faire nous allons commencer par créer un ensemble de points distant de 200m le long de la ligne,et uniformiser l'échantillonage de la ligne :
+Il reste a découper cette longue ligne en tronçons de 500m. Pour se faire nous allons commencé par créer un ensemble de points distants de 500m le long de la ligne et uniformiser l’échantillonnage de la ligne :
 ```{r}
 # On prend une ligne et on met un point tous les 100 mètres
 points_eqd = line.geom  %>% st_line_sample(density = 1/10) %>% st_cast("POINT")
 lines_eqd = line.geom  %>% st_line_sample(density = 1/10) %>% st_cast("LINESTRING")
-split_points = points_eqd[seq(1,length(points_eqd),by=20)]
+split_points = points_eqd[seq(1,length(points_eqd),by=50)]
 plot(points_eqd,pch=20,cex=0.2)
 ```
 
@@ -815,7 +815,7 @@ ggplot(periph_count) +
   theme(panel.background = element_rect(fill = "white",color=NA),
         plot.background = element_rect(fill = "white",color=NA)) +
   labs(title = "Nombre de personnes accidentées sur le périphérique",
-       subtitle = "en 2019, par portion de 200m",
+       subtitle = "en 2019, par portion de 500m",
        caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021",x="",y="")
 
 ```
