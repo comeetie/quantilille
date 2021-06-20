@@ -1,5 +1,5 @@
 # Packages du CRAN
-packages <- c("dplyr", "banR", "tidygeocoder", "mapview", "sf", "osmdata",
+packages <- c("dplyr", "tidygeocoder", "mapview", "sf", "osmdata",
               "RColorBrewer", "ggplot2", "readr",
               "ggspatial", "knitr", "sfnetworks", "tidygraph", "remotes")
 

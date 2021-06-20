@@ -134,7 +134,7 @@ plot(st_geometry(iris.75))
 ```
 
 ```{block, box.title = "4", box.body = list(fill = "white"), box.icon = "fa-star"}
-Importez la couche des accidents de la route appelée 'accidents_75.geojson' et affichez la carte des accidents dans Paris en utilisant simplement la fonction `plot`. 
+Importez la couche des accidents de la route appelée 'accidents2019_paris.geojson' et affichez la carte des accidents dans Paris en utilisant simplement la fonction `plot`. 
 ```
 
 ```{block, opts.label = "clues"}
@@ -163,11 +163,11 @@ title("Accidents à Paris")
 ```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
 Effectuez ces quelques traitement géomatiques : 
 
-1. Créez un polygone avec le contour de paris en agrégeant les iris de Paris (union simple)
-2. Faire une zone tampon autour de celui-ci de 1km
+1. Créez un polygone avec le contour de Paris en agrégeant les iris de Paris (union simple)
+2. Faire une zone tampon de 1km autour de celui-ci
 3. Extraire les centroïdes des iris
-4. Calculez les distances entre les centroïdes des iis
-5. Calculez les polygones de Voronoïs autour des centroïdes des iris
+4. Calculez les distances entre les centroïdes des iris
+5. Calculez les polygones de Voronoï autour des centroïdes des iris
 6. Affichez les différentes couches créées 
 
 ```
@@ -181,15 +181,15 @@ Utilisez les fonctions `st_union`, `st_buffer`, `st_voronoi`, `st_collection_ext
 iris.75.u <- st_union(iris.75)
 # 2. Zone tampon de 1km
 iris.75.b <- st_buffer(x = iris.75.u, dist = 1000)
-# 3. centroïdes
+# 3. Centroïdes
 iris.75.c <- st_centroid(iris.75)
-# 4. distance entre centroïdes
+# 4. Distance entre centroïdes
 mat <- st_distance(x=iris.75.c, y=iris.75.c)
 # 5. Calculer les polygones de Voronoïs autour des centroïdes
 iris.75.v <- st_collection_extract(st_voronoi(x = st_union(iris.75.c)))
 iris.75.v <- st_intersection(iris.75.v,iris.75.u)
 
-
+# 6. Affichage des cartes
 plot(st_geometry(iris.75.b), lwd=2, border ="red",col=NA)
 plot(st_geometry(iris.75),  ltw=5, col="#999999", add = TRUE)
 plot(st_geometry(iris.75.u), border="blue", ltw=5, col=NA, add = TRUE)
@@ -203,15 +203,15 @@ plot(st_geometry(iris.75.v),  ltw=5, col=NA,border="blue", add = TRUE)
 iris.75.u <- st_union(iris.75)
 # 2. Zone tampon de 1km
 iris.75.b <- st_buffer(x = iris.75.u, dist = 1000)
-# 3. centroïdes
+# 3. Centroïdes
 iris.75.c <- st_centroid(iris.75)
-# 4. distance entre centroïdes
+# 4. Distance entre centroïdes
 mat <- st_distance(x=iris.75.c, y=iris.75.c)
 # 5. Calculer les polygones de Voronoïs autour des centroïdes
 iris.75.v <- st_collection_extract(st_voronoi(x = st_union(iris.75.c)))
 iris.75.v <- st_intersection(iris.75.v,iris.75.u)
 
-
+# 6. Affichage des cartes
 plot(st_geometry(iris.75.b), lwd=2, border ="red",col=NA)
 plot(st_geometry(iris.75),  ltw=5, col="#999999", add = TRUE)
 plot(st_geometry(iris.75.u), border="blue", ltw=5, col=NA, add = TRUE)
