@@ -648,8 +648,10 @@ ordre_catv_f <- gg %>%
 
 # 4. Graphique
 library(ggplot2)
-ggplot(data = gg)+
-  geom_bar(aes(x = prop, y= factor(catv_f,levels=ordre_catv_f),fill = grav_f), stat="identity") + 
+ggplot(data = gg,aes(x = prop, y= factor(catv_f,levels=ordre_catv_f),fill = grav_f, group=grav_f))+
+  geom_bar(stat="identity") + 
+   geom_text(aes(label = round(prop)),
+             position = position_stack(vjust = 0.5)) +
   scale_fill_manual("Gravité (%)",
                     values =  c("darkred","red","orange","darkgreen"))+
   theme_bw()+
@@ -657,6 +659,7 @@ ggplot(data = gg)+
        subtitle = "à Paris en 2019",
        caption = "fichier BAAC 2019, ONISR\nantuki & comeetie, 2021",
        x = "", y = "Type de véhicule")
+
 
 ```
 
