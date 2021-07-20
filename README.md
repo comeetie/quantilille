@@ -9,6 +9,8 @@ Cet atelier est composé de deux parties :
 - Un [cours magistral](https://comeetie.github.io/quantilille/lecture/lecture.html) ;
 - Un [tutoriel](https://comeetie.github.io/quantilille/exercises/exercises.html)  
 
+Ces supports, ainsi que les autres supports de l'école d'été Quantilille sont également disponibles [ici](https://gitlab.univ-lille.fr/quantilille/quantilille2021).
+
 ## Données
 
 ### Accidents de la route
@@ -24,9 +26,14 @@ Les supports s'appuient sur les
 
 Les fonds de cartes proviennent de l'[IGN](https://geoservices.ign.fr/documentation/diffusion/telechargement-donnees-libres.html#contoursiris).
 
-### Crédits
+## Crédits et Licence
 
 Cette présentation s'inspire, ainsi que son tutoriel, d'une [précédente formation](https://github.com/comeetie/satRday) donnée par les mêmes auteurs avec Timothée Giraud (@RCarto). 
 
-This material may be reused under © 2021 Kim Antunez & Etienne Côme [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/).
+Les contenus de ce répertoire sont diffusés sous licence [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/). Vous êtes libre d'utiliser ces contenus et de les modifier à la seule condition d'en accréditer la provenance et de les rediffuser selon les mêmes termes en indiquant notamment © 2021 Kim Antunez & Etienne Côme.
 
+
+- Les données IGN ainsi que la Base de données annuelles des accidents corporels de la circulation routière sont diffusées selon les termes de [la licence ouverte Etalab 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence). 
+
+- Les données OpenStreetMap sont diffusées selon les termes [Open Data Commons Open Database License](https://www.openstreetmap.org/copyright/fr). 
+- Les données Airbnb sont diffusées selon les termes de [Creative Commons CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
